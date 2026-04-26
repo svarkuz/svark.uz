@@ -1,0 +1,221 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A gate, fence or railing product available for order.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the product" },
+        "description": { "type": "string", "description": "Detailed description of the product" },
+        "price": { "type": "number", "description": "Base price for the product" },
+        "pricePerSqM": { "type": "number", "description": "Price per square meter" },
+        "category": { "type": "string", "enum": ["Residential Gates", "Commercial Fences", "Decorative Panels", "gate", "railing", "decorative"], "description": "Product category" },
+        "imageUrl": { "type": "string", "format": "uri", "description": "Primary image URL of the product" },
+        "images": { "type": "array", "items": { "type": "string", "format": "uri" }, "description": "Additional product images" },
+        "dimensions": {
+          "type": "object",
+          "properties": {
+            "height": { "type": "number", "description": "Height in meters" },
+            "width": { "type": "number", "description": "Width in meters" },
+            "depth": { "type": "number", "description": "Depth/thickness in meters" }
+          }
+        },
+        "material": { "type": "string", "description": "Material used (e.g., Wrought Iron, Steel)" }
+      },
+      "required": ["name", "category", "imageUrl"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "An order placed by a customer or master.",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string", "description": "ID of the product ordered (optional if custom)" },
+        "productName": { "type": "string", "description": "Name of the product ordered" },
+        "masterId": { "type": "string", "description": "UID of the master/customer who placed the order" },
+        "masterName": { "type": "string", "description": "Name of the person placing the order" },
+        "firstName": { "type": "string", "description": "First name of the customer" },
+        "lastName": { "type": "string", "description": "Last name of the customer" },
+        "masterPhone": { "type": "string", "description": "Phone number" },
+        "width": { "type": "number", "description": "Width in meters" },
+        "height": { "type": "number", "description": "Height in meters" },
+        "totalArea": { "type": "number", "description": "Total area in square meters" },
+        "totalPrice": { "type": "number", "description": "Total calculated price" },
+        "designImageUrl": { "type": "string", "description": "Image URL of the desired design" },
+        "siteImageUrl": { "type": "string", "description": "Image URL of the installation site" },
+        "locationType": { "type": "string", "enum": ["home", "work", "other"], "description": "Installation location type" },
+        "style": { "type": "string", "enum": ["modern", "classic", "baroque", "minimalist", "industrial", "ornate"], "description": "Design style" },
+        "material": { "type": "string", "enum": ["steel", "iron", "aluminum", "stainless"], "description": "Material used" },
+        "customFeatures": { "type": "array", "items": { "type": "string" }, "description": "List of custom features" },
+        "address": { "type": "string", "description": "Installation address" },
+        "paymentMethod": { "type": "string", "description": "Preferred payment method" },
+        "description": { "type": "string", "description": "Additional details" },
+        "status": { "type": "string", "enum": ["pending", "processing", "completed", "cancelled"], "description": "Order status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Order creation timestamp" }
+      },
+      "required": ["masterId", "status", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string", "description": "Display name" },
+        "email": { "type": "string", "format": "email", "description": "Email address" },
+        "role": { "type": "string", "enum": ["master", "admin", "customer"], "description": "User role" },
+        "phone": { "type": "string", "description": "Phone number" },
+        "firstName": { "type": "string", "description": "First name" },
+        "lastName": { "type": "string", "description": "Last name" },
+        "workplace": { "type": "string", "description": "Workplace or address" },
+        "bio": { "type": "string", "description": "User bio/about me section" },
+        "lastActive": { "type": "string", "format": "date-time", "description": "Last activity timestamp" },
+        "isOnline": { "type": "boolean", "description": "Online status" },
+        "profileComplete": { "type": "boolean", "description": "Whether profile is complete" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "GalleryItem": {
+      "title": "GalleryItem",
+      "description": "An item in the work process gallery.",
+      "type": "object",
+      "properties": {
+        "imageUrl": { "type": "string", "format": "uri", "description": "URL of the image" },
+        "title": { "type": "string", "description": "Title of the work" },
+        "aiDescription": { "type": "string", "description": "AI generated description" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["imageUrl", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A comment on a gallery item.",
+      "type": "object",
+      "properties": {
+        "galleryItemId": { "type": "string", "description": "ID of the gallery item" },
+        "userId": { "type": "string", "description": "UID of the commenter" },
+        "userName": { "type": "string", "description": "Name of the commenter" },
+        "text": { "type": "string", "description": "Comment text" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["galleryItemId", "userId", "text", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A message in the admin chat.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string", "description": "UID of the sender" },
+        "receiverId": { "type": "string", "description": "UID of the receiver" },
+        "text": { "type": "string", "description": "Message text" },
+        "type": { "type": "string", "enum": ["text", "voice", "image", "video", "round_video"], "description": "Message type" },
+        "fileUrl": { "type": "string", "description": "URL of the attached file" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "read": { "type": "boolean", "description": "Whether the message has been read" }
+      },
+      "required": ["senderId", "receiverId", "type", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A notification for a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of the user to notify" },
+        "type": { "type": "string", "description": "Notification type" },
+        "message": { "type": "string", "description": "Notification message" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "read": { "type": "boolean", "description": "Whether the notification has been read" }
+      },
+      "required": ["userId", "message", "createdAt"]
+    },
+    "Craftsman": {
+      "title": "Craftsman",
+      "description": "A craftsman profile.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Craftsman's name" },
+        "bio": { "type": "string", "description": "Brief bio highlighting expertise" },
+        "portfolio": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "List of portfolio image URLs" 
+        },
+        "rating": { "type": "number", "description": "Average rating" },
+        "reviewCount": { "type": "number", "description": "Total number of reviews" },
+        "specialties": { "type": "array", "items": { "type": "string" }, "description": "List of specialties" },
+        "imageUrl": { "type": "string", "description": "Profile image URL" }
+      },
+      "required": ["name", "bio"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "A review for a craftsman.",
+      "type": "object",
+      "properties": {
+        "craftsmanId": { "type": "string", "description": "ID of the craftsman being reviewed" },
+        "userId": { "type": "string", "description": "UID of the reviewer" },
+        "userName": { "type": "string", "description": "Name of the reviewer" },
+        "rating": { "type": "number", "description": "Rating (1-5)" },
+        "comment": { "type": "string", "description": "Review comment" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["craftsmanId", "userId", "rating", "createdAt"]
+    },
+    "Workflow": {
+      "title": "Workflow",
+      "description": "A process workflow item.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the workflow" },
+        "direction": { "type": "string", "description": "Direction or route" },
+        "user": { "type": "string", "description": "Assigned user" },
+        "status": { "type": "string", "enum": ["pending", "running", "completed"], "description": "Workflow status" },
+        "startTime": { "type": "string", "format": "date-time", "description": "Scheduled start time" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["name", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Collection of available products."
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of orders placed by masters."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles."
+    },
+    "/gallery/{itemId}": {
+      "schema": "GalleryItem",
+      "description": "Collection of gallery items."
+    },
+    "/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Collection of comments."
+    },
+    "/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Collection of chat messages."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Collection of notifications."
+    },
+    "/craftsmen/{craftsmanId}": {
+      "schema": "Craftsman",
+      "description": "Collection of craftsman profiles."
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Collection of reviews for craftsmen."
+    },
+    "/workflows/{workflowId}": {
+      "schema": "Workflow",
+      "description": "Collection of process workflows."
+    }
+  }
+}

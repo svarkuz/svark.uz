@@ -1,0 +1,9 @@
+{
+  "name": "Svark UZ - Professional Xizmatlar",
+  "description": "Sifatli va hamyonbob reshotka va darvozalar. Buyurtma berish platformasi.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": []
+}
