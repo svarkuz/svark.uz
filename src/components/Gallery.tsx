@@ -4,11 +4,12 @@ import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp } from 
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { GalleryDetail } from './GalleryDetail';
-import { Camera, Sparkles, MapPin, ImageIcon, Maximize2, X } from 'lucide-react';
+import { Camera, Sparkles, MapPin, ImageIcon, Maximize2, X, ShoppingCart, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'motion/react';
+import { toast } from 'sonner';
 
-export const Gallery: React.FC<{ user: any }> = ({ user }) => {
+export const Gallery: React.FC<{ user: any, addToCart?: (product: any) => void }> = ({ user, addToCart }) => {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSeeding, setIsSeeding] = useState(false);
@@ -34,6 +35,7 @@ export const Gallery: React.FC<{ user: any }> = ({ user }) => {
     if (!loading && items.length === 0 && user?.email === 'kidsafeuzb@gmail.com' && !isSeeding) {
       setIsSeeding(true);
       const initialImages = [
+        "https://i.ibb.co/xKDDStgk/photo-2026-04-01-18-18-43.jpg", // 34 - special one (main)
         "https://i.ibb.co/CK7XZctB/photo-2026-04-10-19-59-19.jpg",
         "https://i.ibb.co/zhvffpwv/photo-2026-04-10-19-59-17.jpg",
         "https://i.ibb.co/zWscWtL3/photo-2026-01-14-22-34-35.jpg",
@@ -90,12 +92,29 @@ export const Gallery: React.FC<{ user: any }> = ({ user }) => {
         "https://i.ibb.co/vtzBWrZ/photo-2026-01-09-21-22-57.jpg"
       ];
 
+      const specialSubImages = [
+        "https://i.ibb.co/cSyDQLjv/photo-2026-04-10-19-59-26.jpg", // 26
+        "https://i.ibb.co/bMTKZr6T/photo-2026-04-10-19-59-05.jpg", // 49
+        "https://i.ibb.co/Wvg7gBYH/photo-2026-04-10-19-59-07.jpg", // 48
+        "https://i.ibb.co/Q39dwLb0/photo-2026-04-10-19-59-09.jpg", // 46
+        "https://i.ibb.co/xKD2CM2d/photo-2026-04-01-18-18-34.jpg", // 45
+        "https://i.ibb.co/v66qr1LM/photo-2026-04-10-19-55-22.jpg", // 31
+        "https://i.ibb.co/wrCTfzdC/photo-2026-04-01-18-18-48.jpg", // 28
+        "https://i.ibb.co/q3mFYXsh/photo-2026-04-10-20-00-32.jpg", // 27
+        "https://i.ibb.co/cSyDQLjv/photo-2026-04-10-19-59-26.jpg", // 26 (dup)
+        "https://i.ibb.co/nND7SMzH/photo-2026-04-10-20-01-01.jpg", // 22
+        "https://i.ibb.co/9QWJ6gb/photo-2026-04-10-20-01-16.jpg", // 21
+        "https://i.ibb.co/vgxbhLs/photo-2026-04-10-19-59-11.jpg", // 15
+      ];
+
       initialImages.forEach(async (url, index) => {
-        await addDoc(collection(db, 'gallery'), {
+        const itemData: any = {
           imageUrl: url,
-          title: `Ish jarayoni #${index + 1}`,
+          title: index === 0 ? "Ish jarayoni 34" : `Ish jarayoni #${index + 1}`,
           createdAt: serverTimestamp()
-        });
+        };
+
+        await addDoc(collection(db, 'gallery'), itemData);
       });
     }
   }, [loading, items.length, user]);
@@ -114,56 +133,79 @@ export const Gallery: React.FC<{ user: any }> = ({ user }) => {
     <div className={`space-y-8 transition-all duration-500 ${isFullScreen ? 'fixed inset-0 z-[100] bg-white p-6 overflow-y-auto' : ''}`}>
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
-            <Camera className="w-8 h-8 text-blue-600" />
+          <h2 className="text-4xl font-black tracking-tighter text-gray-900 flex items-center gap-3 uppercase italic">
+            <Camera className="w-8 h-8 text-gold" />
             Ish jarayonlari
           </h2>
-          <p className="text-gray-500">Bizning ustalarimiz tomonidan bajarilgan ishlar va ish jarayonidan lavhalar.</p>
+          <p className="text-gray-500 font-medium max-w-xl">Bizning ustalarimiz tomonidan bajarilgan ishlar va ish jarayonidan lavhalar.</p>
         </div>
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={() => setIsFullScreen(!isFullScreen)}
-          className="rounded-xl hover:bg-gray-100"
+          className="rounded-[1.25rem] hover:bg-gold/5 h-14 w-14 border border-gold/10 text-gold shadow-sm transition-all active:scale-90"
         >
           {isFullScreen ? <X className="w-6 h-6" /> : <Maximize2 className="w-6 h-6" />}
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
         {items.map((item, index) => (
           <motion.div
             key={item.id}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.05 }}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.03, type: 'spring', stiffness: 100 }}
+            className="flex flex-col bg-white rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-gold/5 group"
           >
-            <Card 
-              className="group relative aspect-square overflow-hidden border-none cursor-pointer rounded-2xl shadow-sm hover:shadow-xl transition-all"
+            <div 
+              className="relative aspect-square cursor-pointer overflow-hidden"
               onClick={() => setSelectedItem(item)}
             >
               <img
                 src={item.imageUrl}
                 alt={item.title}
-                className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500"
+                className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700"
                 referrerPolicy="no-referrer"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
-                <div className="text-white space-y-1">
-                  <p className="font-bold text-sm truncate">{item.title}</p>
-                  {item.location && (
-                    <p className="text-[10px] flex items-center gap-1 opacity-80">
-                      <MapPin className="w-3 h-3" /> {item.location}
-                    </p>
-                  )}
-                  {item.images?.length > 1 && (
-                    <p className="text-[10px] flex items-center gap-1 opacity-80">
-                      <ImageIcon className="w-3 h-3" /> {item.images.length} ta rasm
-                    </p>
-                  )}
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute top-4 right-4">
+                <Badge className="bg-white/95 backdrop-blur-md text-gold border border-gold/10 font-black px-3 py-1.5 rounded-xl text-[10px] uppercase tracking-widest shadow-xl">
+                  SVRK
+                </Badge>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="font-black text-gray-900 italic uppercase tracking-tighter truncate pr-2">{item.title}</p>
+                </div>
+                <div className="flex items-center gap-2 bg-gray-50 w-fit px-2 py-0.5 rounded-lg border border-gold/5">
+                  <Star className="w-3 h-3 text-gold fill-gold" />
+                  <span className="text-[10px] font-black text-gray-900 tabular-nums">5.0</span>
                 </div>
               </div>
-            </Card>
+
+              <Button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (addToCart) {
+                    addToCart({
+                      id: item.id,
+                      name: item.title,
+                      imageUrl: item.imageUrl,
+                      pricePerSqM: 850000,
+                      category: 'gallery_design'
+                    });
+                  }
+                }}
+                className="w-full bg-gold hover:bg-gold-light text-white rounded-2xl h-12 text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-xl shadow-gold/20 transition-all active:scale-[0.98]"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                Buyurtma berish
+              </Button>
+            </div>
           </motion.div>
         ))}
       </div>

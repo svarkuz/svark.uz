@@ -4,7 +4,7 @@ import { collection, onSnapshot, query, where, orderBy, updateDoc, doc, serverTi
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bell, MessageSquare, Package, CheckCircle2, Clock } from 'lucide-react';
+import { Bell, MessageSquare, Package, CheckCircle2, Clock, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const NotificationsList: React.FC<{ 
@@ -77,19 +77,19 @@ export const NotificationsList: React.FC<{
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
-            <Bell className="w-6 h-6 text-blue-600" />
+        <div className="flex items-center gap-5">
+          <div className="w-14 h-14 bg-gold/10 rounded-2xl flex items-center justify-center border border-gold/10 shadow-sm">
+            <Bell className="w-7 h-7 text-gold" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Bildirishnomalar</h2>
-            <p className="text-sm text-gray-500">Barcha yangiliklar va xabarlar</p>
+            <h2 className="text-3xl font-black text-gray-900 italic uppercase tracking-tighter">Bildirishnomalar</h2>
+            <p className="text-sm text-gray-500 font-medium">Barcha yangiliklar va xabarlar</p>
           </div>
         </div>
         {notifications.some(n => !n.read) && (
-          <Button variant="ghost" onClick={markAllAsRead} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-xl">
+          <Button variant="ghost" onClick={markAllAsRead} className="text-gold font-black uppercase text-[10px] tracking-widest hover:bg-gold/5 rounded-xl px-4 py-2 border border-gold/10">
             Hammasini o'qilgan deb belgilash
           </Button>
         )}
@@ -101,59 +101,59 @@ export const NotificationsList: React.FC<{
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100"
+              className="text-center py-24 bg-gray-50 rounded-[3rem] border border-gold/10 shadow-inner"
             >
-              <Bell className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-              <p className="text-gray-500">Hozircha bildirishnomalar yo'q</p>
+              <Bell className="w-16 h-16 text-gold/20 mx-auto mb-6" />
+              <p className="text-gray-400 font-black uppercase text-xs tracking-[0.2em]">Hozircha bildirishnomalar yo'q</p>
             </motion.div>
           ) : (
             notifications.map((notification) => (
               <motion.div
                 key={notification.id}
                 layout
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
               >
                 <Card 
-                  className={`border-none shadow-sm rounded-2xl overflow-hidden transition-all cursor-pointer hover:shadow-md ${
-                    notification.read ? 'bg-white/50 opacity-75' : 'bg-white border-l-4 border-l-blue-600'
+                  className={`border-none shadow-sm rounded-[2rem] overflow-hidden transition-all cursor-pointer hover:shadow-xl hover:bg-white group ${
+                    notification.read ? 'bg-gray-50/50 opacity-75' : 'bg-white border-l-4 border-l-gold shadow-md'
                   }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
-                  <CardContent className="p-6 flex items-start gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                      notification.type === 'new_message' ? 'bg-green-100 text-green-600' :
-                      notification.type === 'new_order' ? 'bg-blue-100 text-blue-600' :
-                      'bg-gray-100 text-gray-600'
+                  <CardContent className="p-8 flex items-start gap-6">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-gold/5 transform group-hover:scale-110 transition-transform ${
+                      notification.type === 'new_message' ? 'bg-gold/10 text-gold' :
+                      notification.type === 'new_order' ? 'bg-gold text-white' :
+                      'bg-gray-100 text-gray-500'
                     }`}>
-                      {notification.type === 'new_message' ? <MessageSquare className="w-5 h-5" /> :
-                       notification.type === 'new_order' ? <Package className="w-5 h-5" /> :
-                       <Bell className="w-5 h-5" />}
+                      {notification.type === 'new_message' ? <MessageSquare className="w-6 h-6" /> :
+                       notification.type === 'new_order' ? <Package className="w-6 h-6" /> :
+                       <Bell className="w-6 h-6" />}
                     </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <p className={`font-bold ${notification.read ? 'text-gray-600' : 'text-gray-900'}`}>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center justify-between gap-4">
+                        <p className={`font-black uppercase italic tracking-tight text-lg leading-tight ${notification.read ? 'text-gray-500' : 'text-gray-900 group-hover:text-gold transition-colors'}`}>
                           {notification.message}
                         </p>
                         {!notification.read && (
-                          <Badge className="bg-blue-600 text-white border-none">Yangi</Badge>
+                          <Badge className="bg-gold text-white border-none font-black text-[10px] uppercase tracking-widest px-3 py-1 animate-pulse">Yangi</Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-xs text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
+                      <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-widest">
+                        <span className="flex items-center gap-2 text-gray-400">
+                          <Clock className="w-3.5 h-3.5 text-gold/40" />
                           {notification.createdAt?.toDate().toLocaleString()}
                         </span>
                         {notification.read ? (
-                          <span className="flex items-center gap-1 text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full">
-                            <CheckCircle2 className="w-3 h-3" />
+                          <span className="flex items-center gap-2 text-gray-400 font-bold bg-gray-100 px-3 py-1 rounded-full">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
                             O'qildi
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1 text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-full">
-                            <Clock className="w-3 h-3" />
-                            Yangi
+                          <span className="flex items-center gap-2 text-gold font-bold bg-gold/5 px-3 py-1 rounded-full border border-gold/10">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            Yangi Xabar
                           </span>
                         )}
                       </div>

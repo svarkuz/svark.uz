@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="text-gray-600 mb-6">{errorMessage}</p>
             <button
               onClick={() => window.location.reload()}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-8 py-3 bg-gold hover:bg-gold-light text-white rounded-xl font-black uppercase tracking-widest shadow-xl shadow-gold/20 transition-all active:scale-95"
             >
               Sahifani yangilash
             </button>

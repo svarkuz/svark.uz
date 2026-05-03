@@ -4,7 +4,7 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Ruler, User, Hammer, Droplets, Grid, PlusCircle, ArrowLeft, Camera, MapPin, Briefcase, Phone, ArrowRight, Share2 } from 'lucide-react';
+import { ShoppingCart, Ruler, User, Hammer, Droplets, Grid, PlusCircle, ArrowLeft, Camera, MapPin, Briefcase, Phone, ArrowRight, Share2, Star } from 'lucide-react';
 import { OrderDialog } from './OrderDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { motion, AnimatePresence } from 'motion/react';
@@ -12,11 +12,12 @@ import { toast } from 'sonner';
 
 export const ProductList: React.FC<{ 
   user: any; 
+  userProfile?: any;
   onOpenAI?: () => void;
   onOpenTryOn?: (imageUrl: string) => void;
   searchQuery?: string;
   addToCart?: (product: any) => void;
-}> = ({ user, onOpenAI, onOpenTryOn, searchQuery = '', addToCart }) => {
+}> = ({ user, userProfile, onOpenAI, onOpenTryOn, searchQuery = '', addToCart }) => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -38,11 +39,11 @@ export const ProductList: React.FC<{
   }, []);
 
   const categories = [
-    { id: 'Residential Gates', name: 'Uy Darvozalari', image: "https://i.ibb.co/hFzT9dLT/61fb16de-275c-4010-aeb4-e9a747d4f967.png", color: 'bg-blue-600', orderImage: "https://i.ibb.co/9QV5Ytc/2d4685cb-cefa-4883-9cdf-61b85a6ca52d.png" },
-    { id: 'Commercial Fences', name: "Sanoat To'siqlari", image: "https://i.ibb.co/DDqTHMkH/639cc0c6-d5e8-4959-98b3-8b7c89c525bc.png", color: 'bg-indigo-600', orderImage: "https://i.ibb.co/v66qr1LM/photo-2026-04-10-19-55-22.jpg" },
-    { id: 'Decorative Panels', name: 'Dekorativ Panellar', image: "https://i.ibb.co/9QV5Ytc/2d4685cb-cefa-4883-9cdf-61b85a6ca52d.png", color: 'bg-cyan-600', orderImage: "https://i.ibb.co/hFzT9dLT/61fb16de-275c-4010-aeb4-e9a747d4f967.png" },
-    { id: 'naves', name: 'Naves', image: "https://i.ibb.co/20PT75w1/b4d3cf6e-8066-40e1-a310-53c7c5c00a07.jpg", color: 'bg-amber-600', orderImage: "https://i.ibb.co/hRdR75PG/photo-2026-04-10-19-55-26.jpg" },
-    { id: 'other', name: 'Boshqa narsalar', icon: PlusCircle, color: 'bg-gray-600' },
+    { id: 'Residential Gates', name: 'Uy Darvozalari', image: "https://i.ibb.co/hFzT9dLT/61fb16de-275c-4010-aeb4-e9a747d4f967.png", color: 'bg-gold' },
+    { id: 'Commercial Fences', name: "Santexnik", image: "https://i.ibb.co/DDqTHMkH/639cc0c6-d5e8-4959-98b3-8b7c89c525bc.png", color: 'bg-gold-light' },
+    { id: 'Decorative Panels', name: 'Reshotka', image: "https://i.ibb.co/9QV5Ytc/2d4685cb-cefa-4883-9cdf-61b85a6ca52d.png", color: 'bg-gold' },
+    { id: 'naves', name: 'Naves', image: "https://i.ibb.co/xKDDStgk/photo-2026-04-01-18-18-43.jpg", color: 'bg-gold-light' },
+    { id: 'other', name: 'Boshqa narsalar', icon: PlusCircle, color: 'bg-gray-100' },
   ];
 
   const filteredProducts = products.filter(p => {
@@ -70,17 +71,8 @@ export const ProductList: React.FC<{
       if (onOpenAI) onOpenAI();
       return;
     }
-    const cat = categories.find(c => c.id === catId);
     setSelectedCategory(catId);
-    
-    setProductDetail({
-      id: 'custom-' + catId,
-      name: cat?.name || 'Maxsus buyurtma',
-      imageUrl: cat?.orderImage || cat?.image,
-      fullImage: cat?.image,
-      category: catId,
-      description: `${cat?.name} bo'yicha maxsus buyurtma berish. Bu bo'limda siz xohlagan o'lchamdagi va dizayndagi mahsulotga buyurtma bera olasiz.`
-    });
+    setView('products');
   };
 
   if (loading) {
@@ -96,88 +88,75 @@ export const ProductList: React.FC<{
   return (
     <div className="space-y-8">
       {user && (
-        <div className="p-6 bg-white rounded-3xl shadow-sm border border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center overflow-hidden">
-              {user.photoURL ? (
-                <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
+        <div className="p-8 bg-gray-50 rounded-[2.5rem] shadow-inner border border-gold/10 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-5">
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center overflow-hidden border border-gold/20 shadow-sm relative group">
+              <div className="absolute inset-0 bg-gold opacity-0 group-hover:opacity-10 transition-opacity" />
+              {userProfile?.photoURL || user.photoURL ? (
+                <img src={userProfile?.photoURL || user.photoURL} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                <User className="w-6 h-6 text-blue-600" />
+                <User className="w-8 h-8 text-gold/40" />
               )}
             </div>
             <div>
-              <h3 className="font-bold text-lg">Mijoz paneli</h3>
-              <p className="text-sm text-gray-500">Xush kelibsiz, {user.displayName}!</p>
+              <h3 className="font-black text-xl italic uppercase tracking-tight text-gray-900">Mijoz paneli</h3>
+              <p className="text-gray-500 font-medium">Xush kelibsiz, <span className="text-gold">{(userProfile?.displayName || user.displayName)?.toLowerCase()}</span>!</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <Dialog>
-              <DialogTrigger className="hidden sm:flex flex-col items-end text-right hover:opacity-80 transition-opacity">
-                <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Usta bilan bog'lanish</span>
-                <span className="text-blue-600 font-bold">UMID: +998 90 932 39 92</span>
+              <DialogTrigger className="hidden sm:flex flex-col items-end text-right group">
+                <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest group-hover:text-gold transition-colors">Usta bilan bog'lanish</span>
+                <span className="text-gold font-black italic tracking-tighter uppercase text-lg group-hover:scale-105 transition-transform">UMID: +998 90 932 39 92</span>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px] rounded-3xl">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                    <User className="w-6 h-6 text-blue-600" />
-                    Usta haqida ma'lumot
+              <DialogContent className="sm:max-w-[440px] rounded-[3rem] p-0 border border-gold/20 overflow-hidden bg-white shadow-2xl">
+                <div className="bg-gold p-10 text-white relative">
+                  <DialogTitle className="text-3xl font-black italic uppercase tracking-tighter flex items-center gap-3">
+                    <User className="w-8 h-8" />
+                    Usta Ma'lumoti
                   </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-6 py-4">
-                  <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-2xl">
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm overflow-hidden">
-                      <img src="https://i.ibb.co/v66qr1LM/photo-2026-04-10-19-55-22.jpg" alt="Usta" className="w-full h-full object-cover" />
+                </div>
+                <div className="p-8 space-y-8">
+                  <div className="flex items-center gap-5 p-6 bg-gray-50 rounded-[2rem] border border-gold/10 shadow-inner">
+                    <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-md overflow-hidden ring-2 ring-white">
+                      <img src="https://i.ibb.co/rGStjV9t/photo-2026-04-19-13-06-56.jpg" alt="Usta" className="w-full h-full object-cover" />
                     </div>
                     <div>
-                      <h4 className="text-xl font-bold text-gray-900">Umidjon Usta</h4>
-                      <p className="text-blue-600 font-medium tracking-tight">Professional payvandlovchi</p>
+                      <h4 className="text-2xl font-black text-gray-900 uppercase italic tracking-tighter leading-tight">Umidjon Usta</h4>
+                      <p className="text-gold font-black uppercase text-[10px] tracking-widest mt-1">Professional payvandlovchi</p>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                      <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                        <MapPin className="w-5 h-5 text-gray-500" />
+                  <div className="grid grid-cols-1 gap-3">
+                    {[
+                      { icon: <MapPin className="w-5 h-5 text-gold" />, label: "Shahar", value: "Toshkent viloyati" },
+                      { icon: <Briefcase className="w-5 h-5 text-gold" />, label: "Tajriba", value: "8 yildan ko'p" },
+                      { icon: <Hammer className="w-5 h-5 text-gold" />, label: "Sohasi", value: "Darvoza, Reshotka, Naves" }
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-4 p-4 bg-gray-50/50 rounded-2xl border border-gold/5 group hover:border-gold/20 transition-all">
+                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                          {item.icon}
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">{item.label}</p>
+                          <p className="font-black text-gray-900 uppercase italic tracking-tighter text-sm">{item.value}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-400 font-bold uppercase">Shahar</p>
-                        <p className="font-bold text-gray-900">Toshkent viloyati</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                      <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                        <Briefcase className="w-5 h-5 text-gray-500" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 font-bold uppercase">Tajriba</p>
-                        <p className="font-bold text-gray-900">8 yildan ko'p</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                      <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                        <Hammer className="w-5 h-5 text-gray-500" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 font-bold uppercase">Mutaxassislik</p>
-                        <p className="font-bold text-gray-900">Darvoza, Reshotka, Naves</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
 
-                  <div className="pt-4">
-                    <a href="tel:+998909323992" className="w-full">
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-2xl font-bold flex gap-2">
-                        <Phone className="w-5 h-5" />
-                        Bog'lanish: +998 90 932 39 92
+                  <div className="pt-2">
+                    <a href="tel:+998909323992" className="w-full block">
+                      <Button className="w-full bg-gold hover:bg-gold-light text-white h-18 rounded-[2rem] font-black text-lg uppercase tracking-widest shadow-xl shadow-gold/20 flex gap-3 transform active:scale-[0.98] transition-all">
+                        <Phone className="w-6 h-6" />
+                        +998 90 932 39 92
                       </Button>
                     </a>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
-            <Badge className="bg-green-100 text-green-700 border-none px-4 py-1.5 rounded-full">
+            <Badge className="bg-white text-gold border border-gold/20 px-5 py-2 rounded-full font-black uppercase tracking-widest text-[10px] shadow-sm italic">
               Tizimda faol
             </Badge>
           </div>
@@ -220,12 +199,12 @@ export const ProductList: React.FC<{
                       </div>
                     )}
                   </div>
-                  <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/20 to-transparent group-hover:from-blue-900/90 group-hover:via-blue-900/40 transition-colors duration-500" />
-                  <div className="absolute bottom-4 left-4 right-4 z-20 text-white">
-                    <h3 className="text-lg sm:text-xl font-black mb-1 leading-tight">{cat.name}</h3>
-                    <p className="text-[10px] sm:text-xs text-white/70 font-bold uppercase tracking-widest flex items-center gap-1">
-                      {cat.id === 'other' ? "AI Assistant" : "Catalog"}
-                      <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                  <div className="absolute inset-0 z-10 bg-gradient-to-t from-gray-900/90 via-gray-900/20 to-transparent group-hover:from-gold/90 group-hover:via-gold/40 transition-colors duration-500" />
+                  <div className="absolute bottom-6 left-6 right-6 z-20 text-white">
+                    <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter mb-2 leading-tight">{cat.name}</h3>
+                    <p className="text-[10px] text-white/70 font-black uppercase tracking-[0.3em] flex items-center gap-2">
+                      {cat.id === 'other' ? "AI Assistant" : "DIGI CATALOG"}
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
                     </p>
                   </div>
                 </motion.div>
@@ -244,14 +223,14 @@ export const ProductList: React.FC<{
               <Button 
                 variant="ghost" 
                 onClick={() => setView('categories')}
-                className="rounded-xl gap-2 hover:bg-gray-100"
+                className="rounded-2xl gap-2 hover:bg-gold/5 text-gray-500 hover:text-gold font-black uppercase text-[10px] tracking-widest px-6"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Orqaga
               </Button>
               <Button 
                 onClick={() => setView('custom')}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 shadow-lg shadow-blue-200"
+                className="bg-gold hover:bg-gold-light text-white rounded-2xl gap-2 shadow-xl shadow-gold/20 font-black uppercase text-[10px] tracking-widest px-8"
               >
                 <PlusCircle className="w-4 h-4" />
                 Maxsus buyurtma
@@ -287,12 +266,12 @@ export const ProductList: React.FC<{
                         <Button 
                           size="icon" 
                           variant="secondary" 
-                          className="w-10 h-10 rounded-xl bg-white/90 backdrop-blur-md text-blue-600 border-none shadow-lg hover:bg-white"
+                          className="w-12 h-12 rounded-2xl bg-white/95 backdrop-blur-md text-gold border-none shadow-xl hover:bg-gold hover:text-white transition-all transform active:scale-90"
                           onClick={() => addToCart?.(product)}
                         >
-                          <ShoppingCart className="w-5 h-5" />
+                          <ShoppingCart className="w-6 h-6" />
                         </Button>
-                        <Badge className="bg-white/90 backdrop-blur-md text-blue-600 border-none font-bold py-2">
+                        <Badge className="bg-white/95 backdrop-blur-md text-gold border border-gold/10 font-black px-4 py-2 rounded-xl text-[10px] uppercase tracking-widest shadow-sm">
                           {product.category === 'gate' ? 'Darvoza' : 
                            product.category === 'decorative' ? 'Reshotka' : 
                            product.category === 'railing' ? 'Santexnik' : 
@@ -302,49 +281,40 @@ export const ProductList: React.FC<{
                     </div>
                     
                     <div className="p-6 space-y-4 flex flex-col flex-1 cursor-pointer" onClick={() => setProductDetail(product)}>
-                      <div className="flex-1">
-                        <h3 className="text-xl font-black text-gray-900 leading-tight group-hover:text-blue-600 transition-colors">
-                          {product.name}
-                        </h3>
-                        <p className="text-gray-500 text-sm line-clamp-2 mt-1 leading-relaxed">{product.description}</p>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center justify-between gap-4">
+                          <h3 className="text-xl font-black text-gray-900 italic uppercase tracking-tighter leading-tight group-hover:text-gold transition-colors">
+                            {product.name}
+                          </h3>
+                          <button className="text-gold/20 hover:text-gold transition-colors shrink-0">
+                            <span className="sr-only">Share</span>
+                            <Share2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                        <p className="text-sm font-medium text-gray-500 leading-relaxed line-clamp-2">
+                          {product.description}
+                        </p>
                       </div>
                       
-                      {/* Price removed as per user request */}
+                      <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gold/5 w-fit">
+                        <div className="flex items-center gap-0.5">
+                          {[1,2,3,4,5].map(i => <Star key={i} className="w-3 h-3 text-gold fill-gold" />)}
+                        </div>
+                        <span className="text-[10px] font-black text-gray-900 tabular-nums">5.0</span>
+                      </div>
 
-                      <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="pt-2">
                         <Button 
                           onClick={(e) => {
                             e.stopPropagation();
                             addToCart?.(product);
                           }}
-                          variant="outline"
-                          className="rounded-2xl h-12 font-bold border-2 border-blue-50 text-blue-600 hover:bg-blue-50"
+                          className="w-full bg-gold hover:bg-gold-light text-white rounded-2xl h-14 font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-gold/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
                         >
-                          Savatga
-                        </Button>
-                        <Button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedProduct(product);
-                          }}
-                          className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl h-12 font-bold shadow-lg shadow-blue-200"
-                        >
-                          Buyurtma
+                          <ShoppingCart className="w-5 h-5" />
+                          Buyurtma Berish
                         </Button>
                       </div>
-
-                      <Button 
-                        variant="ghost"
-                        onClick={() => {
-                          const url = window.location.href;
-                          navigator.clipboard.writeText(`Svark_uz: ${product.name} - ${url}`);
-                          toast.success("Havola nusxalandi!");
-                        }}
-                        className="w-full text-[10px] text-gray-400 hover:text-blue-600 font-bold uppercase tracking-widest gap-2"
-                      >
-                        <Share2 className="w-3 h-3" />
-                        Do'stlarga ulashish
-                      </Button>
                     </div>
                   </motion.div>
                 ))
@@ -357,7 +327,7 @@ export const ProductList: React.FC<{
                   <p className="text-gray-500 mt-2 max-w-sm mx-auto">Siz xohlagan dizaynni AI orqali yaratishimiz yoki maxsus buyurtma qabul qilishimiz mumkin.</p>
                   <Button 
                     onClick={() => setView('custom')}
-                    className="mt-8 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-10 py-6 text-lg font-bold shadow-xl shadow-blue-200"
+                    className="mt-8 bg-gold hover:bg-gold-light text-white rounded-2xl px-10 py-8 text-xl font-black italic uppercase tracking-widest shadow-xl shadow-gold/20 active:scale-95 transition-all"
                   >
                     Maxsus buyurtma berish
                   </Button>
@@ -376,7 +346,7 @@ export const ProductList: React.FC<{
                   <div className="aspect-video relative overflow-hidden bg-gray-100 group/zoom">
                     <img src={productDetail.imageUrl} alt={productDetail.name} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-8">
-                      <Badge className="bg-white/90 text-blue-600 border-none font-bold py-2 px-4 rounded-xl text-sm">
+                      <Badge className="bg-white/90 text-gold border-none font-black py-2 px-4 rounded-xl text-xs uppercase tracking-widest">
                         {productDetail.category.toUpperCase()}
                       </Badge>
                     </div>
@@ -386,7 +356,7 @@ export const ProductList: React.FC<{
                       {[productDetail.imageUrl, ...productDetail.images].map((img: string, idx: number) => (
                         <div 
                           key={idx} 
-                          className="w-20 h-20 rounded-xl overflow-hidden shrink-0 border-2 border-white shadow-sm cursor-pointer hover:border-blue-400 transition-colors"
+                          className="w-20 h-20 rounded-xl overflow-hidden shrink-0 border-2 border-white shadow-sm cursor-pointer hover:border-gold transition-colors"
                           onClick={() => setProductDetail({...productDetail, imageUrl: img})}
                         >
                           <img src={img} alt="Thumb" className="w-full h-full object-cover" />
@@ -397,70 +367,61 @@ export const ProductList: React.FC<{
                 </div>
                 <div className="p-8 sm:p-10 space-y-8">
                   <div>
-                    <h2 className="text-4xl font-black text-gray-900 tracking-tight">{productDetail.name}</h2>
-                    <div className="w-20 h-1.5 bg-blue-600 rounded-full mt-4" />
+                    <h2 className="text-4xl font-black text-gray-900 tracking-tighter italic uppercase">{productDetail.name}</h2>
+                    <div className="w-20 h-2 bg-gold rounded-full mt-4 shadow-sm" />
                   </div>
                   
                   <div className="space-y-6">
                     <div className="space-y-2">
-                       <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest border-l-4 border-blue-600 pl-3">Mahsulot Haqida</h4>
-                       <p className="text-gray-600 text-lg leading-relaxed">{productDetail.description}</p>
+                       <h4 className="text-[10px] font-black text-gold uppercase tracking-[0.3em] border-l-4 border-gold pl-3">Mahsulot Haqida</h4>
+                       <p className="text-gray-600 text-lg leading-relaxed font-medium italic">{productDetail.description}</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                        <p className="text-[10px] font-black text-gray-400 uppercase">Material</p>
-                        <p className="font-bold text-gray-900">{productDetail.material || 'Yuqori sifatli temir'}</p>
+                      <div className="p-5 bg-gray-50 rounded-[1.5rem] border border-gold/5 shadow-inner">
+                        <p className="text-[10px] font-black text-gold/40 uppercase tracking-widest mb-1">Material</p>
+                        <p className="font-black text-gray-900 uppercase italic tracking-tighter">{productDetail.material || 'Yuqori sifatli temir'}</p>
                       </div>
-                      <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                        <p className="text-[10px] font-black text-gray-400 uppercase">Bo'yoq</p>
-                        <p className="font-bold text-gray-900">Kukunli (Antik-bronza)</p>
+                      <div className="p-5 bg-gray-50 rounded-[1.5rem] border border-gold/5 shadow-inner">
+                        <p className="text-[10px] font-black text-gold/40 uppercase tracking-widest mb-1">Bo'yoq</p>
+                        <p className="font-black text-gray-900 uppercase italic tracking-tighter">Kukunli (Antik-bronza)</p>
                       </div>
                       {productDetail.dimensions && (
-                        <div className="col-span-1 sm:col-span-2 p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex justify-between items-center">
+                        <div className="col-span-1 sm:col-span-2 p-6 bg-gold/5 rounded-[2rem] border border-gold/10 flex justify-between items-center shadow-inner">
                           <div>
-                            <p className="text-[10px] font-black text-blue-400 uppercase">O'lchamlar</p>
-                            <p className="font-bold text-blue-900">
+                            <p className="text-[10px] font-black text-gold/40 uppercase tracking-widest mb-1">O'lchamlar</p>
+                            <p className="font-black text-gray-900 uppercase italic tracking-tighter text-lg">
                               {productDetail.dimensions.height}m x {productDetail.dimensions.width}m 
                               {productDetail.dimensions.depth ? ` x ${productDetail.dimensions.depth}m` : ''}
                             </p>
                           </div>
-                          <Ruler className="w-6 h-6 text-blue-400" />
+                          <Ruler className="w-8 h-8 text-gold" />
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-end p-6 bg-blue-50 rounded-3xl border border-blue-100 shadow-inner">
-                    <div className="text-right">
-                      <span className="text-xs text-blue-400 uppercase font-black tracking-widest">Narx</span>
-                      <p className="font-black text-blue-800 text-xl">
-                        {productDetail.price ? `${productDetail.price.toLocaleString()} so'm` : 'Usta hisoblaydi'}
-                      </p>
-                    </div>
+                  <div className="flex flex-col sm:flex-row gap-4 pt-4 pb-4">
+                    <Button 
+                      onClick={() => {
+                        addToCart?.(productDetail);
+                        setProductDetail(null);
+                      }}
+                      className="flex-1 bg-gold hover:bg-gold-light text-white py-10 rounded-[2rem] text-xl font-black italic uppercase tracking-widest shadow-xl shadow-gold/20 transition-all active:scale-95"
+                    >
+                      SAVATGA QO'SHISH
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        setSelectedProduct(productDetail);
+                        setProductDetail(null);
+                      }}
+                      variant="outline"
+                      className="flex-1 py-10 rounded-[2rem] text-xl font-black italic uppercase tracking-widest border-2 border-gold/10 text-gold hover:bg-gold/5 transition-all shadow-sm"
+                    >
+                      BUYURTMA BERISH
+                    </Button>
                   </div>
-
-                <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                  <Button 
-                    onClick={() => {
-                      addToCart?.(productDetail);
-                      setProductDetail(null);
-                    }}
-                    variant="outline"
-                    className="flex-1 py-8 rounded-2xl text-lg font-bold border-2 border-blue-100 text-blue-600 hover:bg-blue-50"
-                  >
-                    Savatga qo'shish
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      setSelectedProduct(productDetail);
-                      setProductDetail(null);
-                    }}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-8 rounded-2xl text-lg font-bold shadow-xl shadow-blue-200 transition-all active:scale-95"
-                  >
-                    MAXSUS BUYURTMA BERISH
-                  </Button>
-                </div>
               </div>
             </div>
           )}

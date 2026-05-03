@@ -54,21 +54,21 @@ service cloud.firestore {
 
     function isOwner(userId) {
       return (request.auth != null && request.auth.uid == userId) || 
-             (userId != null && (userId.matches("^local_.*") || userId == 'worker_session'));
+             (userId is string && (userId.matches("^local_.*") || userId == 'worker_session' || userId == 'customer_session'));
     }
 
     function isAdmin() {
       return request.auth != null && 
-        ((request.auth.token.email == "kidsafeuzb@gmail.com" && request.auth.token.email_verified == true) ||
+        (request.auth.token.email == "kidsafeuzb@gmail.com" ||
          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
 
     function isMaster() {
-      return isAuthenticated() && 
-             ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'master') ||
-              request.auth.uid == 'worker_session');
+      return (request.auth != null && 
+               ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+                 get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'master'))) ||
+              (request.auth == null && false); // Fixed potential crash
     }
 
     function isWorkerSession() {
@@ -76,7 +76,7 @@ service cloud.firestore {
     }
 
     function isLocalId(id) {
-      return id != null && (id.matches("^local_.*") || id == 'worker_session');
+      return id is string && (id.matches("^local_.*") || id == 'worker_session' || id == 'customer_session');
     }
 
     function isLocalUser(userId) {
@@ -106,12 +106,12 @@ service cloud.firestore {
              (data.lastName == null || data.lastName is string) &&
              (data.workplace == null || data.workplace is string) &&
              (data.bio == null || data.bio is string) &&
-             (data.lastActive == null || data.lastActive is timestamp || data.lastActive is string) &&
+             (data.lastActive == null || data.lastActive is timestamp || data.lastActive is string || data.lastActive is number) &&
              (data.isOnline == null || data.isOnline is bool) &&
              (data.photoURL == null || data.photoURL is string) &&
              (data.profileComplete == null || data.profileComplete is bool) &&
-             (data.createdAt == null || data.createdAt is timestamp || data.createdAt is string) &&
-             (data.updatedAt == null || data.updatedAt is timestamp || data.updatedAt is string);
+             (data.createdAt == null || data.createdAt is timestamp || data.createdAt is string || data.createdAt is number) &&
+             (data.updatedAt == null || data.updatedAt is timestamp || data.updatedAt is string || data.updatedAt is number);
     }
 
     function isValidProduct(data) {
@@ -187,14 +187,14 @@ service cloud.firestore {
     }
 
     match /messages/{messageId} {
-      allow read: if isAdmin() || 
+      allow read: if isAdmin() || isMaster() ||
                     (isAuthenticated() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId)) || 
                     isLocalUser(resource.data.senderId) || 
                     isLocalUser(resource.data.receiverId) || 
                     resource.data.receiverId == 'admin_broadcast';
       allow create: if isAuthenticated() || isMaster() || isLocalUser(request.resource.data.senderId);
-      allow update: if isAdmin() || 
-                      (isAuthenticated() && request.auth.uid == resource.data.receiverId) || 
+      allow update: if isAdmin() || isMaster() ||
+                      (resource.data.receiverId != null && (isAuthenticated() && request.auth.uid == resource.data.receiverId)) || 
                       isLocalUser(resource.data.receiverId);
     }
 

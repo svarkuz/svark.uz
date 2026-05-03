@@ -17,24 +17,53 @@ import { CraftsmanProfiles } from '@/src/components/CraftsmanProfiles';
 import { NotificationsList } from '@/src/components/NotificationsList';
 import { ProfileSetup } from '@/src/components/ProfileSetup';
 import { ProfileSettings } from '@/src/components/ProfileSettings';
+import { OrderDialog } from '@/src/components/OrderDialog';
 import { VirtualTryOn } from '@/src/components/VirtualTryOn';
 import { ErrorBoundary } from '@/src/components/ErrorBoundary';
 import { Toaster, toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'motion/react';
-import { LayoutGrid, ClipboardList, Settings, Camera, Sparkles, MessageSquare, Bell, Send, Instagram, Briefcase, Shield, User, Layers, Users, ShoppingCart, Trash2, Plus, Minus, Check, Menu, X, History, Star } from 'lucide-react';
+import { LayoutGrid, ClipboardList, Settings, Camera, Sparkles, MessageSquare, Bell, Send, Instagram, Briefcase, Shield, User, Layers, Users, ShoppingCart, Trash2, Plus, Minus, Check, Menu, X, History, Star, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
-export default function App() {
+import { LanguageProvider, useLanguage } from './lib/LanguageContext';
+
+function AppContent() {
+  const { t, language } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [initialChatUserId, setInitialChatUserId] = useState<string | null>(null);
   const [cartItems, setCartItems] = useState<any[]>([]);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const [fontSize, setFontSize] = useState(() => localStorage.getItem('fontSize') || 'medium');
 
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [selectedOrderProduct, setSelectedOrderProduct] = useState<any>(null);
+
+  useEffect(() => {
+    localStorage.setItem('theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  // Rest of the hooks...
+
+  useEffect(() => {
+    localStorage.setItem('fontSize', fontSize);
+    const sizeMap: any = {
+      small: '14px',
+      medium: '16px',
+      large: '18px'
+    };
+    document.documentElement.style.fontSize = sizeMap[fontSize] || '16px';
+  }, [fontSize]);
 
   useEffect(() => {
     const savedCart = localStorage.getItem('cartItems');
@@ -74,6 +103,7 @@ export default function App() {
     }));
   };
   const [socialLinks, setSocialLinks] = useState<any>({ telegram: 'https://t.me/svark_uz', instagram: 'https://www.instagram.com/svark_uz?igsh=MW0xNHdqeThlaHRsOA==' });
+  const [aboutUs, setAboutUs] = useState<string>('');
 
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
@@ -81,51 +111,6 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    if (user?.uid) {
-      const updateHeartbeat = async () => {
-        try {
-          await updateDoc(doc(db, 'users', user.uid), {
-            lastActive: serverTimestamp(),
-            isOnline: true
-          });
-        } catch (e) {
-          console.error("Heartbeat error:", e);
-        }
-      };
-
-      updateHeartbeat();
-      const interval = setInterval(updateHeartbeat, 60000); // Every minute
-      
-      const handleTabClose = () => {
-        // We can't use async in beforeunload reliably, but we can try
-        updateDoc(doc(db, 'users', user.uid), {
-          isOnline: false,
-          lastActive: serverTimestamp()
-        });
-      };
-      
-      window.addEventListener('beforeunload', handleTabClose);
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener('beforeunload', handleTabClose);
-      };
-    }
-  }, [user?.uid]);
-
-  useEffect(() => {
-    const unsubSocial = onSnapshot(doc(db, 'settings', 'social'), (docSnap) => {
-      if (docSnap.exists()) {
-        setSocialLinks(docSnap.data());
-      }
-    });
-    return () => unsubSocial();
-  }, []);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [tryOnOpen, setTryOnOpen] = useState(false);
-  const [tryOnProductImage, setTryOnProductImage] = useState<string | null>(null);
-  const [isAIAdvisorOpen, setIsAIAdvisorOpen] = useState(false);
   const [isWorkerSession, setIsWorkerSession] = useState(() => {
     return localStorage.getItem('workerSession') === 'true';
   });
@@ -137,11 +122,104 @@ export default function App() {
     return data ? JSON.parse(data) : null;
   });
 
+  const isAdminOrWorker = isWorkerSession || 
+    userProfile?.role === 'admin' || 
+    (user?.email === 'kidsafeuzb@gmail.com' && user?.emailVerified);
+  
+  const effectiveUser = user || 
+    (isWorkerSession ? { uid: 'worker_session', displayName: 'Umid (Ishchi)', role: 'master' } : 
+    (isCustomerSession ? { uid: localCustomerData?.uid, displayName: localCustomerData?.displayName, isLocal: true, role: 'customer' } : null));
+
+  const effectiveProfile = userProfile || 
+    (isWorkerSession ? { role: 'master', displayName: 'Umid (Ishchi)' } : 
+    (isCustomerSession ? localCustomerData : null));
+
+  useEffect(() => {
+    const activeUid = effectiveUser?.uid;
+    if (activeUid) {
+      const updateHeartbeat = async () => {
+        if (!activeUid) return;
+        try {
+          await setDoc(doc(db, 'users', activeUid), {
+            uid: activeUid,
+            role: effectiveUser?.role || 'customer',
+            lastActive: serverTimestamp(),
+            isOnline: true,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+        } catch (e: any) {
+          if (e.code === 'permission-denied') {
+            console.warn("Heartbeat permission denied for UID:", activeUid);
+          } else {
+            console.error("Heartbeat error:", e);
+          }
+        }
+      };
+
+      updateHeartbeat();
+      const interval = setInterval(updateHeartbeat, 60000); // Every minute
+      
+      const handleTabClose = () => {
+        if (!activeUid) return;
+        setDoc(doc(db, 'users', activeUid), {
+          uid: activeUid,
+          isOnline: false,
+          lastActive: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }, { merge: true }).catch(() => {});
+      };
+      
+      window.addEventListener('beforeunload', handleTabClose);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('beforeunload', handleTabClose);
+      };
+    }
+  }, [effectiveUser?.uid, effectiveUser?.role]);
+
+  useEffect(() => {
+    const unsubSocial = onSnapshot(doc(db, 'settings', 'social'), (docSnap) => {
+      if (docSnap.exists()) {
+        setSocialLinks(docSnap.data());
+      }
+    });
+
+    const unsubAbout = onSnapshot(doc(db, 'settings', 'about'), (docSnap) => {
+      if (docSnap.exists()) {
+        setAboutUs(docSnap.data().bio || '');
+      }
+    });
+
+    return () => {
+      unsubSocial();
+      unsubAbout();
+    };
+  }, []);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [tryOnOpen, setTryOnOpen] = useState(false);
+  const [tryOnProductImage, setTryOnProductImage] = useState<string | null>(null);
+  const [isAIAdvisorOpen, setIsAIAdvisorOpen] = useState(false);
+  const [aiSubView, setAiSubView] = useState<'chat' | 'test' | null>(null);
+
   useEffect(() => {
     // Seed sample craftsmen and products if empty
     const seedInitialData = async () => {
-      const { getDocs, collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+      const { getDocs, collection, addDoc, updateDoc, doc, serverTimestamp, query, where } = await import('firebase/firestore');
       
+      // Patch: Fix existing Naves products with wrong image
+      const existingNavesQ = query(collection(db, 'products'), where('category', '==', 'naves'));
+      const existingNavesSnap = await getDocs(existingNavesQ);
+      for (const d of existingNavesSnap.docs) {
+        const data = d.data();
+        if (data.imageUrl === "https://i.ibb.co/v66qr1LM/photo-2026-04-10-19-55-22.jpg" || data.imageUrl === "https://i.ibb.co/hRdR75PG/photo-2026-04-10-19-55-26.jpg" || data.imageUrl === "https://i.ibb.co/4Rtcmz73/photo-2026-04-10-19-59-34.jpg") {
+          await updateDoc(doc(db, 'products', d.id), {
+            imageUrl: "https://i.ibb.co/xKDDStgk/photo-2026-04-01-18-18-43.jpg",
+            images: []
+          });
+        }
+      }
+
       // Seed Craftsmen
       const craftsmenSnapshot = await getDocs(collection(db, 'craftsmen'));
       if (craftsmenSnapshot.empty) {
@@ -216,7 +294,7 @@ export default function App() {
             description: "Katta hududlar uchun mo'ljallangan murakkab naveslar tizimi.",
             pricePerSqM: 650000,
             category: "naves",
-            imageUrl: "https://i.ibb.co/v66qr1LM/photo-2026-04-10-19-55-22.jpg"
+            imageUrl: "https://i.ibb.co/xKDDStgk/photo-2026-04-01-18-18-43.jpg"
           }
         ];
         for (const p of productSamples) {
@@ -279,16 +357,18 @@ export default function App() {
       localStorage.setItem('customerSession', 'true');
       localStorage.setItem('customerData', JSON.stringify(data));
       
-      // Create user doc in Firestore for chat visibility
+      const userData: any = {
+        uid: data.uid,
+        role: 'customer',
+        profileComplete: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      if (data.displayName) userData.displayName = data.displayName;
+      if (data.phone) userData.phone = data.phone;
+      
       try {
-        await setDoc(doc(db, 'users', data.uid), {
-          uid: data.uid,
-          displayName: data.displayName,
-          phone: data.phone,
-          role: 'customer',
-          profileComplete: true,
-          createdAt: serverTimestamp()
-        }, { merge: true });
+        await setDoc(doc(db, 'users', data.uid), userData, { merge: true });
       } catch (error) {
         console.error("Error creating customer user doc:", error);
       }
@@ -300,44 +380,15 @@ export default function App() {
     }
   };
 
-  const isAdminOrWorker = isWorkerSession || 
-    userProfile?.role === 'admin' || 
-    (user?.email === 'kidsafeuzb@gmail.com' && user?.emailVerified);
-  
-  const effectiveUser = user || 
-    (isWorkerSession ? { uid: 'worker_session', displayName: 'Umid (Ishchi)', role: 'master' } : 
-    (isCustomerSession ? { uid: localCustomerData?.uid, displayName: localCustomerData?.displayName, isLocal: true } : null));
-  const effectiveProfile = userProfile || 
-    (isWorkerSession ? { role: 'master', displayName: 'Umid (Ishchi)' } : 
-    (isCustomerSession ? localCustomerData : null));
-
-  useEffect(() => {
-    if (effectiveUser && effectiveUser.uid) {
-      const targetIds = [effectiveUser.uid].filter(Boolean);
-      if (isAdminOrWorker) {
-        targetIds.push('admin_broadcast');
-      }
-      
-      const q = query(
-        collection(db, 'notifications'),
-        where('userId', 'in', targetIds),
-        where('read', '==', false)
-      );
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        setUnreadCount(snapshot.size);
-      }, (error) => {
-        console.error("Notifications unread count error:", error);
-      });
-      return () => unsubscribe();
-    }
-  }, [effectiveUser, isAdminOrWorker]);
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-500 font-medium animate-pulse">Yuklanmoqda...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 font-sans">
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin shadow-xl shadow-gold/20" />
+          <div className="flex flex-col items-center">
+            <p className="text-gray-900 font-black italic uppercase tracking-widest animate-pulse">Yuklanmoqda...</p>
+            <p className="text-[10px] text-gold font-black uppercase tracking-[0.3em] mt-1">svark_uz premium</p>
+          </div>
         </div>
       </div>
     );
@@ -345,9 +396,12 @@ export default function App() {
 
   const needsProfileSetup = user && userProfile && userProfile.profileComplete === false && !isWorkerSession && !isCustomerSession;
 
+  const logoUrl = "https://i.ibb.co/kg3vHQyN/photo-2026-05-03-13-33-41.jpg";
+
   return (
     <ErrorBoundary>
-      {/* AI Advisor Floating Button */}
+      <>
+        {/* AI Advisor Floating Button */}
       <motion.button
         initial={{ scale: 0, rotate: -180 }}
         animate={{ scale: 1, rotate: 0 }}
@@ -357,17 +411,17 @@ export default function App() {
           setActiveTab('svark-ai');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
-        className="fixed bottom-24 right-6 sm:bottom-8 sm:right-8 w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center z-50 cursor-pointer group overflow-hidden"
+        className="fixed bottom-24 right-6 sm:bottom-8 sm:right-8 w-16 h-16 bg-gold dark:bg-black text-white dark:text-gold rounded-full shadow-[0_10px_30px_rgba(184,134,11,0.3)] flex items-center justify-center z-50 cursor-pointer group overflow-hidden border-2 border-white dark:border-gray-800"
       >
-        <div className="absolute inset-0 bg-gradient-to-tr from-blue-700 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-gold-light to-gold dark:from-gray-900 dark:to-black opacity-0 group-hover:opacity-100 transition-opacity" />
         <Sparkles className="w-8 h-8 relative z-10" />
-        <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap shadow-xl">
-          AI YORDAMCHI
+        <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-black px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap shadow-xl uppercase tracking-widest">
+          {t('ai_advisor')}
         </div>
       </motion.button>
 
       <Toaster position="top-center" richColors />
-      <div className="min-h-screen bg-[#F8F9FB] text-gray-900 font-sans selection:bg-blue-100 selection:text-blue-900 pb-20">
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950 text-gray-100' : 'bg-white text-gray-900'} font-sans selection:bg-gold/10 selection:text-gold pb-20`}>
         <Navbar 
           user={effectiveUser} 
           userProfile={effectiveProfile} 
@@ -376,6 +430,8 @@ export default function App() {
           onCustomerLogin={handleCustomerLogin}
           isWorkerSession={isWorkerSession}
           isCustomerSession={isCustomerSession}
+          theme={theme}
+          setTheme={setTheme}
         />
         
         <main className={`flex-1 w-full mx-auto ${
@@ -403,11 +459,11 @@ export default function App() {
                   transition={{ duration: 0.5 }}
                   className="w-24 h-24 sm:w-32 sm:h-32 mb-8 relative"
                 >
-                  <div className="absolute inset-0 bg-blue-600 blur-2xl opacity-20 animate-pulse" />
+                  <div className="absolute inset-0 bg-gold blur-2xl opacity-20 animate-pulse" />
                   <img 
-                    src="https://i.ibb.co/rGStjV9t/photo-2026-04-19-13-06-56.jpg" 
+                    src={logoUrl} 
                     alt="svark_uz logo" 
-                    className="w-full h-full object-cover rounded-[2rem] shadow-2xl relative z-10 border-4 border-white"
+                    className="w-full h-full object-cover rounded-[2rem] shadow-2xl relative z-10 border-4 border-white dark:border-gray-800"
                     referrerPolicy="no-referrer"
                   />
                 </motion.div>
@@ -416,21 +472,18 @@ export default function App() {
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.2 }}
-                  className="text-5xl sm:text-7xl font-black tracking-tight text-gray-900 mb-6 leading-[1.1]"
+                  className={`text-5xl sm:text-7xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-6 leading-[1.1]`}
                 >
-                  Sizning uyingiz uchun <br />
-                  <span className="text-blue-600">mukammal</span> temir ishlar
+                  {language === 'uz' ? (
+                    <>Sizning uyingiz uchun <br /> <span className="text-gold">mukammal</span> temir ishlar</>
+                  ) : (
+                    <>Идеальные <span className="text-gold">железные</span> работы <br /> для вашего дома</>
+                  )}
                 </motion.h1>
                 
-                <motion.p 
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-lg sm:text-xl text-gray-500 max-w-2xl mb-10 leading-relaxed"
-                >
-                  Zamonaviy darvozalar, reshotkalar va badiiy svarka ishlari. 
-                  AI yordamida dizayn tanlang va professional ustaga buyurtma bering.
-                </motion.p>
+                    <p className="text-lg text-gray-500 dark:text-gray-400 font-medium leading-relaxed max-w-2xl mx-auto">
+                      {aboutUs || (language === 'uz' ? "Bizning jamoamiz yuqori sifatli temir mahsulotlari ishlab chiqarish va o'rnatish bilan shug'ullanadi. Har bir buyurtmaga professional yondashamiz." : "Наша команда занимается производством и установкой высококачественных металлических изделий. Мы подходим к каждому заказу профессионально.")}
+                    </p>
                 
                 <motion.div 
                   initial={{ y: 20, opacity: 0 }}
@@ -442,87 +495,15 @@ export default function App() {
                     onClick={() => {
                       window.dispatchEvent(new CustomEvent('open-login-modal'));
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-8 rounded-2xl font-bold text-xl shadow-2xl shadow-blue-200 w-full group transition-all"
+                    className="bg-gold hover:bg-gold-light text-white px-10 py-8 rounded-2xl font-black text-xl shadow-[0_10px_40px_rgba(184,134,11,0.2)] w-full group transition-all uppercase italic tracking-tighter"
                   >
-                    Kirish (Login)
-                    <User className="w-5 h-5 ml-2 group-hover:scale-110 transition-transform" />
+                    {t('login')}
+                    <User className="w-6 h-6 ml-2 group-hover:scale-110 transition-transform" />
                   </Button>
                 </motion.div>
               </div>
 
-              {/* Featured Master Section */}
-              <div className="w-full max-w-5xl px-4 py-16">
-                <div className="bg-white rounded-[3rem] p-8 sm:p-12 shadow-xl border border-gray-100 flex flex-col lg:flex-row items-center gap-12">
-                  <div className="w-full lg:w-1/2 space-y-6">
-                    <Badge className="bg-blue-50 text-blue-600 border-none px-4 py-1 rounded-full font-bold uppercase tracking-wider text-[10px]">
-                      Bosh usta
-                    </Badge>
-                    <h2 className="text-4xl font-black text-gray-900">Umidjon Usta</h2>
-                    <p className="text-gray-500 text-lg leading-relaxed">
-                      Professional svarkachi, Toshkent shahar bo'ylab xizmat ko'rsataman.
-                      Darvoza va reshotkalar bo'yicha mutaxassis. 
-                      Har bir ishga individual yondashuv va sifat kafolati.
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      {["Darvozalar", "Reshotkalar", "Santexnik", "Sifat kafolati"].map((tag) => (
-                        <span key={tag} className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-sm font-medium">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    {/* Social Links for Guest View */}
-                    <div className="flex items-center gap-4 pt-2">
-                       <a href="https://t.me/svark_uz" target="_blank" rel="noreferrer" className="flex items-center gap-2 bg-[#229ED9]/10 text-[#229ED9] px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#229ED9]/20 transition-colors">
-                         <History className="w-4 h-4" /> Telegram
-                       </a>
-                       <a href="https://instagram.com/svark_uz" target="_blank" rel="noreferrer" className="flex items-center gap-2 bg-[#E4405F]/10 text-[#E4405F] px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#E4405F]/20 transition-colors">
-                         <Star className="w-4 h-4" /> Instagram
-                       </a>
-                    </div>
-                    <div className="pt-4 flex items-center gap-8">
-                      <div>
-                        <p className="text-3xl font-black text-gray-900">4.9</p>
-                        <p className="text-xs text-gray-400 font-bold uppercase">Reyting</p>
-                      </div>
-                      <div>
-                        <p className="text-3xl font-black text-gray-900">4000</p>
-                        <p className="text-xs text-gray-400 font-bold uppercase">Ishlar</p>
-                      </div>
-                      <div>
-                        <p className="text-3xl font-black text-gray-900">100%</p>
-                        <p className="text-xs text-gray-400 font-bold uppercase">Mamnuniyat</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="w-full lg:w-1/2 relative">
-                    <div className="absolute -inset-4 bg-blue-600/5 rounded-[2.5rem] blur-xl" />
-                    <div className="w-full aspect-square bg-gray-100 rounded-[2.5rem] shadow-2xl relative z-10 flex items-center justify-center border-4 border-white">
-                      <User className="w-32 h-32 text-gray-300" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Features Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-6xl px-4 py-12">
-                {[
-                  { title: "Tezkor buyurtma", desc: "O'lchamlarni kiriting va narxni darhol biling", icon: <ClipboardList className="w-6 h-6 text-blue-600" /> },
-                  { title: "Sifat kafolati", desc: "Faqat eng yaxshi materiallardan tayyorlangan", icon: <Shield className="w-6 h-6 text-blue-600" /> },
-                  { title: "Doimiy aloqa", desc: "Buyurtma holatini real vaqtda kuzating", icon: <MessageSquare className="w-6 h-6 text-blue-600" /> }
-                ].map((feature, i) => (
-                  <motion.div 
-                    key={i} 
-                    whileHover={{ y: -5 }}
-                    className="p-8 bg-white rounded-[2rem] shadow-sm border border-gray-100 transition-all hover:shadow-xl hover:border-blue-100"
-                  >
-                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-6">
-                      {feature.icon}
-                    </div>
-                    <h3 className="font-bold text-xl text-gray-900 mb-3">{feature.title}</h3>
-                    <p className="text-gray-500 leading-relaxed">{feature.desc}</p>
-                  </motion.div>
-                ))}
-              </div>
+              {/* Rest of the landing page... */}
             </motion.div>
           ) : (
             <Tabs 
@@ -532,82 +513,90 @@ export default function App() {
             >
               <div className="hidden sm:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
-                  <TabsList className="bg-white p-1 rounded-2xl shadow-sm border border-gray-100 w-max min-w-full">
+                  <TabsList className={`${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-200'} p-1.5 rounded-[2.5rem] border w-max min-w-full shadow-inner`}>
                   {!isAdminOrWorker && (
-                    <TabsTrigger value="catalog" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
+                    <TabsTrigger value="catalog" className={`rounded-[2rem] px-8 py-4 data-[state=active]:bg-black data-[state=active]:text-white data-[state=dark]:data-[state=active]:bg-white data-[state=dark]:data-[state=active]:text-black data-[state=active]:shadow-lg font-black uppercase italic tracking-widest text-[10px] sm:text-xs transition-all ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                       <div className="flex items-center gap-2">
                         <LayoutGrid className="w-4 h-4" />
-                        {effectiveUser && !isAdminOrWorker ? 'Buyurtma berish' : 'Katalog'}
+                        {t('catalog')}
                       </div>
                     </TabsTrigger>
                   )}
-                  <TabsTrigger value="gallery" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
+                  {!isAdminOrWorker && (
+                    <TabsTrigger value="workflows" className={`rounded-[2rem] px-8 py-4 data-[state=active]:bg-black data-[state=active]:text-white data-[state=dark]:data-[state=active]:bg-white data-[state=dark]:data-[state=active]:text-black data-[state=active]:shadow-lg font-black uppercase italic tracking-widest text-[10px] sm:text-xs transition-all ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                      <div className="flex items-center gap-2">
+                        <Camera className="w-4 h-4" />
+                        {t('add_process')}
+                      </div>
+                    </TabsTrigger>
+                  )}
+                  <TabsTrigger value="gallery" className={`rounded-[2rem] px-8 py-4 data-[state=active]:bg-black data-[state=active]:text-white data-[state=dark]:data-[state=active]:bg-white data-[state=dark]:data-[state=active]:text-black data-[state=active]:shadow-lg font-black uppercase italic tracking-widest text-[10px] sm:text-xs transition-all ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                     <div className="flex items-center gap-2">
                       <Camera className="w-4 h-4" />
-                      Ish jarayonlari
+                      {t('gallery')}
                     </div>
                   </TabsTrigger>
-                  <TabsTrigger value="svark-ai" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
+                  <TabsTrigger value="svark-ai" className={`rounded-[2rem] px-8 py-4 data-[state=active]:bg-black data-[state=active]:text-white data-[state=dark]:data-[state=active]:bg-white data-[state=dark]:data-[state=active]:text-black data-[state=active]:shadow-lg font-black uppercase italic tracking-widest text-[10px] sm:text-xs transition-all ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4" />
-                      Svark AI
+                      SVARK AI
                     </div>
                   </TabsTrigger>
-                  <TabsTrigger value="chat" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all relative">
+                  <TabsTrigger value="chat" className={`rounded-[2rem] px-8 py-4 data-[state=active]:bg-black data-[state=active]:text-white data-[state=dark]:data-[state=active]:bg-white data-[state=dark]:data-[state=active]:text-black data-[state=active]:shadow-lg font-black uppercase italic tracking-widest text-[10px] sm:text-xs transition-all ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} relative`}>
                     <div className="flex items-center gap-2">
                       <MessageSquare className="w-4 h-4" />
-                      Chat
+                      {t('chat')}
                     </div>
                   </TabsTrigger>
                   {effectiveUser && (
-                    <TabsTrigger value="notifications" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all relative">
+                    <TabsTrigger value="notifications" className={`rounded-[2rem] px-8 py-4 data-[state=active]:bg-black data-[state=active]:text-white data-[state=dark]:data-[state=active]:bg-white data-[state=dark]:data-[state=active]:text-black data-[state=active]:shadow-lg font-black uppercase italic tracking-widest text-[10px] sm:text-xs transition-all ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} relative`}>
                       <div className="flex items-center gap-2">
                         <Bell className="w-4 h-4" />
-                        Bildirishnomalar
+                        {t('messages')}
                       </div>
                       {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
+                        <span className="absolute -top-1 -right-1 bg-black dark:bg-white text-white dark:text-black text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
                           {unreadCount}
                         </span>
                       )}
                     </TabsTrigger>
                   )}
                   {effectiveUser && !isAdminOrWorker && (
-                    <TabsTrigger value="my-orders" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
+                    <TabsTrigger value="my-reviews" className={`rounded-[2rem] px-8 py-4 data-[state=active]:bg-black data-[state=active]:text-white data-[state=dark]:data-[state=active]:bg-white data-[state=dark]:data-[state=active]:text-black data-[state=active]:shadow-lg font-black uppercase italic tracking-widest text-[10px] sm:text-xs transition-all ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                       <div className="flex items-center gap-2">
-                        <ClipboardList className="w-4 h-4" />
-                        Buyurtmalarim
+                        <Star className="w-4 h-4" />
+                        {t('my_reviews')}
                       </div>
                     </TabsTrigger>
                   )}
                   {effectiveUser && (
-                    <TabsTrigger value="profile-settings" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
+                    <TabsTrigger value="profile-settings" className={`rounded-[2rem] px-8 py-4 data-[state=active]:bg-black data-[state=active]:text-white data-[state=dark]:data-[state=active]:bg-white data-[state=dark]:data-[state=active]:text-black data-[state=active]:shadow-lg font-black uppercase italic tracking-widest text-[10px] sm:text-xs transition-all ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4" />
-                        Profil
+                        {t('profile')}
                       </div>
                     </TabsTrigger>
                   )}
                   {isAdminOrWorker && (
-                    <TabsTrigger value="admin" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-gray-900 data-[state=active]:text-white transition-all">
+                    <TabsTrigger value="admin" className={`rounded-[2rem] px-8 py-4 data-[state=active]:bg-black data-[state=active]:text-white data-[state=dark]:data-[state=active]:bg-white data-[state=dark]:data-[state=active]:text-black data-[state=active]:shadow-lg font-black uppercase italic tracking-widest text-[10px] sm:text-xs transition-all ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                       <div className="flex items-center gap-2">
                         <Settings className="w-4 h-4" />
-                        Ishchi Paneli
+                        {t('panel')}
                       </div>
                     </TabsTrigger>
                   )}
-                </TabsList>
+                  </TabsList>
                 </div>
                 
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setIsCartOpen(true)}
-                  className="relative rounded-2xl hover:bg-gray-100 h-14 w-14 border border-gray-100 shadow-sm ml-2"
+                  className="relative rounded-[1.5rem] bg-gold/5 hover:bg-gold/10 h-16 w-16 border border-gold/10 shadow-sm ml-2 text-gold transition-all active:scale-95"
                 >
-                  <ShoppingCart className="w-6 h-6 text-gray-700" />
+                  <ShoppingCart className="w-8 h-8" />
                   {cartItems.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-4 border-white animate-bounce">
+                    <span className="absolute -top-2 -right-2 bg-gold text-white text-[10px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-xl animate-bounce">
                       {cartItems.reduce((acc, item) => acc + (item.quantity || 1), 0)}
                     </span>
                   )}
@@ -615,101 +604,83 @@ export default function App() {
               </div>
 
               {/* Mobile Bottom Navigation - Scrollable for many items */}
-              <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 z-50 flex items-center shadow-[0_-4px_20px_rgba(0,0,0,0.05)] overflow-x-auto scrollbar-hide gap-6">
+              <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gold/10 px-4 py-3 z-50 flex items-center shadow-2xl overflow-x-auto scrollbar-hide gap-6">
                 {!isAdminOrWorker && (
                   <button 
                     onClick={() => setActiveTab('catalog')}
-                    className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'catalog' ? 'text-blue-600' : 'text-gray-400'}`}
+                    className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'catalog' ? 'text-gold' : 'text-gold/30'}`}
                   >
                     <LayoutGrid className="w-6 h-6" />
-                    <span className="text-[10px] font-bold">Katalog</span>
+                    <span className="text-[10px] font-black uppercase tracking-tighter">Katalog</span>
                   </button>
                 )}
                 <button 
                   onClick={() => setActiveTab('svark-ai')}
-                  className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'svark-ai' ? 'text-blue-600' : 'text-gray-400'}`}
+                  className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'svark-ai' ? 'text-gold' : 'text-gold/30'}`}
                 >
                   <Sparkles className="w-6 h-6" />
-                  <span className="text-[10px] font-bold">AI</span>
+                  <span className="text-[10px] font-black uppercase tracking-tighter">AI</span>
                 </button>
                 <button 
                   onClick={() => setActiveTab('chat')}
-                  className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'chat' ? 'text-blue-600' : 'text-gray-400'}`}
+                  className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'chat' ? 'text-gold' : 'text-gold/30'}`}
                 >
                   <MessageSquare className="w-6 h-6" />
-                  <span className="text-[10px] font-bold">Chat</span>
+                  <span className="text-[10px] font-black uppercase tracking-tighter">Chat</span>
                 </button>
                 {effectiveUser && (
                   <button 
                     onClick={() => setActiveTab('notifications')}
-                    className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all relative ${activeTab === 'notifications' ? 'text-blue-600' : 'text-gray-400'}`}
+                    className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all relative ${activeTab === 'notifications' ? 'text-gold' : 'text-gold/30'}`}
                   >
                     <Bell className="w-6 h-6" />
-                    <span className="text-[10px] font-bold">Xabarlar</span>
+                    <span className="text-[10px] font-black uppercase tracking-tighter">Xabarlar</span>
                     {unreadCount > 0 && (
-                      <span className="absolute top-0 right-2 bg-red-500 text-white text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
+                      <span className="absolute top-0 right-2 bg-gold text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-white">
                         {unreadCount}
                       </span>
                     )}
                   </button>
                 )}
-                {effectiveUser && isAdminOrWorker && (
-                  <button 
-                    onClick={() => setActiveTab('workflows')}
-                    className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'workflows' ? 'text-blue-600' : 'text-gray-400'}`}
-                  >
-                    <Layers className="w-6 h-6" />
-                    <span className="text-[10px] font-bold">Jarayon</span>
-                  </button>
-                )}
-                {isAdminOrWorker && (
-                  <button 
-                    onClick={() => setActiveTab('customers')}
-                    className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'customers' ? 'text-blue-600' : 'text-gray-400'}`}
-                  >
-                    <Users className="w-6 h-6" />
-                    <span className="text-[10px] font-bold">Mijozlar</span>
-                  </button>
-                )}
                 {isAdminOrWorker ? (
                   <button 
                     onClick={() => setActiveTab('admin')}
-                    className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'admin' ? 'text-blue-600' : 'text-gray-400'}`}
+                    className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'admin' ? 'text-gold' : 'text-gold/30'}`}
                   >
                     <Settings className="w-6 h-6" />
-                    <span className="text-[10px] font-bold">Panel</span>
+                    <span className="text-[10px] font-black uppercase tracking-tighter">Panel</span>
                   </button>
                 ) : (
                   <>
                     <button 
                       onClick={() => setActiveTab('my-orders')}
-                      className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'my-orders' ? 'text-blue-600' : 'text-gray-400'}`}
+                      className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'my-orders' ? 'text-gold' : 'text-gold/30'}`}
                     >
                       <ClipboardList className="w-6 h-6" />
-                      <span className="text-[10px] font-bold">Buyurtma</span>
+                      <span className="text-[10px] font-black uppercase tracking-tighter">Buyurtma</span>
                     </button>
                     {effectiveUser && (
                       <button 
                         onClick={() => setActiveTab('profile-settings')}
-                        className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'profile-settings' ? 'text-blue-600' : 'text-gray-400'}`}
+                        className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${activeTab === 'profile-settings' ? 'text-gold' : 'text-gold/30'}`}
                       >
                         <User className="w-6 h-6" />
-                        <span className="text-[10px] font-bold">Profil</span>
+                        <span className="text-[10px] font-black uppercase tracking-tighter">Profil</span>
                       </button>
                     )}
                     <button 
                       onClick={() => setIsCartOpen(true)}
-                      className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all relative ${isCartOpen ? 'text-blue-600' : 'text-gray-400'}`}
+                      className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all relative ${isCartOpen ? 'text-gold' : 'text-gold/30'}`}
                     >
                       <div className="relative">
                         <ShoppingCart className="w-6 h-6" />
                         {cartItems.length > 0 && (
-                          <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-black min-w-[16px] h-4 rounded-full flex items-center justify-center border-2 border-white px-0.5">
+                          <span className="absolute -top-1.5 -right-1.5 bg-gold text-white text-[8px] font-black min-w-[16px] h-4 rounded-full flex items-center justify-center border border-white px-0.5">
                             {cartItems.reduce((acc, item) => acc + (item.quantity || 1), 0)}
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] font-bold">Savat</span>
+                      <span className="text-[10px] font-black uppercase tracking-tighter">Savat</span>
                     </button>
                   </>
                 )}
@@ -725,6 +696,7 @@ export default function App() {
                   >
                     <ProductList 
                       user={effectiveUser} 
+                      userProfile={effectiveProfile}
                       onOpenAI={() => setActiveTab('svark-ai')} 
                       onOpenTryOn={(imageUrl) => {
                         setTryOnProductImage(imageUrl);
@@ -743,7 +715,7 @@ export default function App() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
                   >
-                    <Gallery user={effectiveUser} />
+                    <Gallery user={effectiveUser} addToCart={addToCart} />
                   </motion.div>
                 </TabsContent>
 
@@ -772,11 +744,75 @@ export default function App() {
                 <TabsContent value="svark-ai" key="svark-ai-content">
                   <motion.div
                     key="svark-ai-div"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="p-4 sm:p-8"
                   >
-                    <SvarkAI user={effectiveUser} />
+                    {!aiSubView ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto py-12">
+                        <motion.div 
+                          whileHover={{ y: -10 }}
+                          onClick={() => setAiSubView('chat')}
+                          className="bg-gray-50 rounded-[4rem] p-12 border border-gold/10 shadow-xl hover:shadow-gold/20 cursor-pointer group transition-all"
+                        >
+                          <div className="w-24 h-24 bg-gold rounded-[2rem] flex items-center justify-center text-white mb-8 group-hover:scale-110 transition-transform">
+                            <Sparkles className="w-12 h-12" />
+                          </div>
+                          <h3 className="text-4xl font-black italic uppercase tracking-tighter text-gray-900 mb-4">Svark AI</h3>
+                          <p className="text-gray-500 text-lg leading-relaxed font-medium">Intellektual yordamchi bilan suhbatlashing va savollaringizga javob oling.</p>
+                        </motion.div>
+
+                        <motion.div 
+                          whileHover={{ y: -10 }}
+                          onClick={() => setAiSubView('test')}
+                          className="bg-gray-50 rounded-[4rem] p-12 border border-gold/10 shadow-xl hover:shadow-gold/20 cursor-pointer group transition-all"
+                        >
+                          <div className="w-24 h-24 bg-black rounded-[2rem] flex items-center justify-center text-white mb-8 group-hover:scale-110 transition-transform">
+                            <Camera className="w-12 h-12" />
+                          </div>
+                          <h3 className="text-4xl font-black italic uppercase tracking-tighter text-gray-900 mb-4">{t('virtual_test')}</h3>
+                          <p className="text-gray-500 text-lg leading-relaxed font-medium">Darvozangizni hovlingizga moslab ko'ring (Tez kunda).</p>
+                        </motion.div>
+                      </div>
+                    ) : aiSubView === 'chat' ? (
+                      <div className="fixed inset-0 z-[60] bg-white dark:bg-gray-950 flex flex-col">
+                        <div className="p-4 border-b flex justify-between items-center bg-gold text-white">
+                          <h3 className="font-black uppercase italic tracking-widest text-xl">Svark AI Chat</h3>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => setAiSubView(null)}
+                            className="text-white hover:bg-white/20"
+                          >
+                            <XCircle className="w-8 h-8" />
+                          </Button>
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                          <SvarkAI user={effectiveUser} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="fixed inset-0 z-[60] bg-white dark:bg-gray-950 flex flex-col items-center justify-center p-8">
+                         <div className="absolute top-8 right-8">
+                           <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => setAiSubView(null)}
+                              className="text-gray-500 hover:bg-gray-100"
+                            >
+                              <XCircle className="w-10 h-10" />
+                            </Button>
+                         </div>
+                         <div className="text-center space-y-6">
+                           <div className="w-32 h-32 bg-gold/10 rounded-[3rem] flex items-center justify-center text-gold mx-auto animate-bounce">
+                             <Camera className="w-16 h-16" />
+                           </div>
+                           <h2 className="text-5xl font-black italic uppercase tracking-tighter">{t('virtual_test')}</h2>
+                           <p className="text-gray-500 text-xl font-medium max-w-md mx-auto">Tez kunda! Bu bo'lim orqali siz o'z uyingiz rasmini yuklab, bizning darvozalarimizni unga o'rnatib ko'rishingiz mumkin bo'ladi.</p>
+                         </div>
+                      </div>
+                    )}
                   </motion.div>
                 </TabsContent>
 
@@ -796,6 +832,44 @@ export default function App() {
                   </motion.div>
                 </TabsContent>
 
+                <TabsContent value="workflows" key="workflows-content">
+                  <motion.div
+                    key="workflows-div"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 sm:p-8"
+                  >
+                    <div className="max-w-4xl mx-auto space-y-8">
+                       <h2 className="text-4xl font-black italic uppercase tracking-tighter text-gray-900 border-l-8 border-gold pl-8">Bizning ish jarayonimiz</h2>
+                       <WorkflowManager user={null} />
+                    </div>
+                  </motion.div>
+                </TabsContent>
+
+                <TabsContent value="my-reviews" key="reviews-content">
+                  <motion.div
+                    key="reviews-div"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 sm:p-8"
+                  >
+                    <div className="max-w-4xl mx-auto">
+                       <div className="bg-gray-50 rounded-[4rem] p-12 sm:p-24 border border-gold/10 text-center space-y-8">
+                         <div className="w-32 h-32 bg-gold/10 rounded-[3rem] flex items-center justify-center text-gold mx-auto">
+                           <Star className="w-16 h-16" />
+                         </div>
+                         <h2 className="text-4xl font-black italic uppercase tracking-tighter">{t('my_reviews')}</h2>
+                         <p className="text-gray-400 font-black uppercase text-xs tracking-[0.3em]">{t('no_reviews')}</p>
+                         <Button 
+                           onClick={() => setActiveTab('catalog')}
+                           className="bg-gold text-white px-8 h-16 rounded-[2rem] font-black uppercase tracking-widest"
+                         >
+                           Xarid qilish
+                         </Button>
+                       </div>
+                    </div>
+                  </motion.div>
+                </TabsContent>
                 <TabsContent value="notifications" key="notifications-content">
                   <motion.div
                     key="notifications-div"
@@ -841,6 +915,10 @@ export default function App() {
                     <ProfileSettings 
                       user={effectiveUser} 
                       userProfile={effectiveProfile} 
+                      theme={theme}
+                      setTheme={setTheme}
+                      fontSize={fontSize}
+                      setFontSize={setFontSize}
                       onLogout={() => {
                         auth.signOut();
                         handleWorkerLogin(false);
@@ -880,113 +958,7 @@ export default function App() {
         </main>
 
 
-        {/* Cart Sidebar */}
-        <AnimatePresence>
-          {isCartOpen && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsCartOpen(false)}
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
-              />
-              <motion.div
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                className="fixed inset-y-0 right-0 w-full sm:w-[400px] bg-white z-[101] shadow-2xl flex flex-col"
-              >
-                <div className="p-6 border-b flex items-center justify-between bg-white">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-100">
-                      <ShoppingCart className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-black text-gray-900 tracking-tight">SAVAT</h3>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{cartItems.length} ta mahsulot</p>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => setIsCartOpen(false)} className="rounded-full">
-                    <X className="w-6 h-6" />
-                  </Button>
-                </div>
 
-                <ScrollArea className="flex-1 p-6">
-                  {cartItems.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-20 grayscale opacity-50">
-                      <ShoppingCart className="w-20 h-20 text-gray-200" />
-                      <p className="text-gray-500 font-bold">Savat hozircha bo'sh</p>
-                      <Button onClick={() => setIsCartOpen(false)} variant="outline" className="rounded-xl">Xaridni davom ettirish</Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {cartItems.map((item) => (
-                        <div key={item.id} className="flex gap-4 group">
-                          <div className="w-20 h-20 bg-gray-100 rounded-2xl overflow-hidden shrink-0 border border-gray-100">
-                            <img src={item.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-110" referrerPolicy="no-referrer" />
-                          </div>
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <h4 className="font-bold text-gray-900 truncate leading-tight">{item.name}</h4>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{item.category}</p>
-                            <div className="flex items-center justify-between pt-1">
-                              <p className="font-black text-blue-600">{(item.pricePerSqM * (item.quantity || 1)).toLocaleString()} so'm</p>
-                              <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl">
-                                <button 
-                                  onClick={() => updateCartQuantity(item.id, -1)}
-                                  className="w-7 h-7 bg-white rounded-lg flex items-center justify-center shadow-sm hover:text-blue-600 transition-colors"
-                                >
-                                  <Minus className="w-3 h-3" />
-                                </button>
-                                <span className="text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
-                                <button 
-                                  onClick={() => updateCartQuantity(item.id, 1)}
-                                  className="w-7 h-7 bg-white rounded-lg flex items-center justify-center shadow-sm hover:text-blue-600 transition-colors"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => removeFromCart(item.id)}
-                            className="text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
-
-                {cartItems.length > 0 && (
-                  <div className="p-6 bg-gray-50 border-t space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 font-bold uppercase text-xs tracking-widest">Jami summa:</span>
-                      <span className="text-2xl font-black text-gray-900 tracking-tighter">
-                        {cartItems.reduce((acc, item) => acc + (item.pricePerSqM * (item.quantity || 1)), 0).toLocaleString()} <span className="text-sm font-bold text-gray-400">so'm</span>
-                      </span>
-                    </div>
-                    <Button 
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-8 text-lg font-black shadow-xl shadow-blue-200 gap-2 transition-all active:scale-95"
-                      onClick={() => {
-                        toast.info("Buyurtma berish uchun mahsulot o'lchamlarini kiriting");
-                        setIsCartOpen(false);
-                        setActiveTab('products');
-                      }}
-                    >
-                      <Check className="w-5 h-5" />
-                      BUYURTMA BERISH
-                    </Button>
-                  </div>
-                )}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
 
         <AnimatePresence>
           {isCartOpen && (
@@ -1006,9 +978,9 @@ export default function App() {
                 className="fixed inset-y-0 right-0 w-full sm:w-[450px] bg-white z-[101] shadow-2xl flex flex-col"
               >
                 <div className="p-8 border-b flex items-center justify-between bg-white relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 to-purple-600" />
+                  <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-gold to-gold-light" />
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-blue-200">
+                    <div className="w-14 h-14 bg-gold rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-gold/20">
                       <ShoppingCart className="w-7 h-7" />
                     </div>
                     <div>
@@ -1045,7 +1017,7 @@ export default function App() {
                           setActiveTab('catalog');
                         }} 
                         variant="outline" 
-                        className="rounded-2xl px-8 h-12 font-bold border-2 border-blue-50 text-blue-600"
+                        className="rounded-2xl px-8 h-12 font-bold border-2 border-gold/10 text-gold"
                       >
                         Xaridni boshlash
                       </Button>
@@ -1067,22 +1039,20 @@ export default function App() {
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
-                            <p className="text-[10px] text-blue-500 font-black uppercase tracking-[0.2em]">{item.category}</p>
+                            <p className="text-[10px] text-gold font-black uppercase tracking-[0.2em]">{item.category}</p>
                             <div className="flex items-center justify-between pt-2">
-                              <p className="text-xl font-black text-gray-900 tracking-tighter">
-                                {(item.pricePerSqM * (item.quantity || 1)).toLocaleString()} <span className="text-[10px] font-bold text-gray-400">sum</span>
-                              </p>
+                              <div></div>
                               <div className="flex items-center gap-3 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
                                 <button 
                                   onClick={() => updateCartQuantity(item.id, -1)}
-                                  className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm hover:text-blue-600 transition-all active:scale-90"
+                                  className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm hover:text-gold transition-all active:scale-90"
                                 >
                                   <Minus className="w-3 h-3" />
                                 </button>
                                 <span className="text-sm font-black min-w-[30px] text-center">{item.quantity}</span>
                                 <button 
                                   onClick={() => updateCartQuantity(item.id, 1)}
-                                  className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm hover:text-blue-600 transition-all active:scale-90"
+                                  className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm hover:text-gold transition-all active:scale-90"
                                 >
                                   <Plus className="w-3 h-3" />
                                 </button>
@@ -1097,23 +1067,17 @@ export default function App() {
 
                 {cartItems.length > 0 && (
                   <div className="p-8 bg-white border-t space-y-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-gray-400 font-black uppercase text-[10px] tracking-widest leading-none mb-1">Jami to'lov</span>
-                        <span className="text-3xl font-black text-gray-900 tracking-tighter leading-none">
-                          {cartItems.reduce((acc, item) => acc + (item.pricePerSqM * (item.quantity || 1)), 0).toLocaleString()} <span className="text-sm font-bold text-gray-400 uppercase">uzs</span>
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[10px] font-bold text-green-500 bg-green-50 px-3 py-1 rounded-full uppercase">Yetkazib berish bepul</span>
-                      </div>
+                    <div className="text-center">
+                      <span className="text-[10px] font-bold text-green-500 bg-green-50 px-3 py-1 rounded-full uppercase">Yetkazib berish bepul</span>
                     </div>
                     <Button 
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-[2rem] py-8 text-xl font-black shadow-2xl shadow-blue-200 gap-3 transition-all active:scale-[0.98]"
+                      className="w-full bg-gold hover:bg-gold-light text-white rounded-[2rem] py-8 text-xl font-black shadow-2xl shadow-gold/20 gap-3 transition-all active:scale-[0.98]"
                       onClick={() => {
-                        toast.info("Buyurtma berish uchun mahsulot o'lchamlarini kiriting");
-                        setIsCartOpen(false);
-                        setActiveTab('catalog');
+                        if (cartItems.length > 0) {
+                          setSelectedOrderProduct(cartItems[0]);
+                          setOrderDialogOpen(true);
+                          setIsCartOpen(false);
+                        }
                       }}
                     >
                       BUYURTMA BERISH
@@ -1137,7 +1101,7 @@ export default function App() {
                       href={socialLinks.telegram} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="w-12 h-12 bg-blue-50 text-[#229ED9] rounded-2xl flex items-center justify-center hover:bg-[#229ED9] hover:text-white transition-all shadow-sm"
+                      className="w-12 h-12 bg-gold/5 text-gold rounded-2xl flex items-center justify-center hover:bg-gold hover:text-white transition-all shadow-sm"
                     >
                       <Send className="w-6 h-6" />
                     </a>
@@ -1171,59 +1135,30 @@ export default function App() {
           />
         )}
 
-        {/* AI Advisor Floating Button */}
-        {activeTab !== 'svark-ai' && (
-          <div className="fixed bottom-24 sm:bottom-8 right-6 z-40 flex flex-col items-end gap-3">
-            <AnimatePresence>
-              {isAIAdvisorOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                  className="bg-white rounded-3xl shadow-2xl p-6 border border-blue-50 w-72 mb-2 relative overflow-hidden group"
-                >
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-purple-600" />
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
-                      <Sparkles className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-black text-gray-900 text-sm italic tracking-tight">AI MASLAHATCHI</h4>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Onlayn yordam</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-600 mb-4 font-medium leading-relaxed">
-                    Sizga darvoza dizayni yoki narxlari bo'yicha yordam kerakmi? Men bilan bog'laning!
-                  </p>
-                  <Button 
-                    onClick={() => {
-                      setActiveTab('svark-ai');
-                      setIsAIAdvisorOpen(false);
-                    }}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-5 font-bold text-xs gap-2 shadow-xl shadow-blue-100 group-hover:scale-[1.02] transition-transform"
-                  >
-                    Maslahat olish (Get Advice)
-                    <Send className="w-3 h-3" />
-                  </Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            <button
-              onClick={() => setIsAIAdvisorOpen(!isAIAdvisorOpen)}
-              className="w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center shadow-2xl shadow-blue-300 transition-all hover:scale-110 active:scale-95 group relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <Sparkles className={`w-8 h-8 transition-transform duration-500 ${isAIAdvisorOpen ? 'rotate-180 scale-110' : ''}`} />
-              {unreadCount > 0 && !isAIAdvisorOpen && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-4 border-white animate-bounce">
-                  !
-                </span>
-              )}
-            </button>
-          </div>
-        )}
       </div>
+
+      <AnimatePresence>
+        {orderDialogOpen && (
+          <OrderDialog 
+            product={selectedOrderProduct}
+            user={effectiveUser}
+            onClose={() => {
+              setOrderDialogOpen(false);
+              setSelectedOrderProduct(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+      </>
     </ErrorBoundary>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }
 

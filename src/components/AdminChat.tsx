@@ -159,15 +159,15 @@ export const AdminChat: React.FC<{
         adminUnsub();
       };
     } else {
-      // For clients, find the admin to chat with
-      const adminQ = query(collection(db, 'users'), where('role', '==', 'admin'), limit(1));
+      // For clients, find any administrative user (admin or master) to chat with
+      const adminQ = query(collection(db, 'users'), where('role', 'in', ['admin', 'master']), limit(1));
       const unsub = onSnapshot(adminQ, (snapshot) => {
         if (!snapshot.empty) {
           const admin = snapshot.docs[0].id;
           setActiveChatId(admin);
           setAdminUser({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
         } else {
-          // Fallback to broadcast if no admin found yet
+          // Fallback to broadcast if no admin/master found yet
           setActiveChatId('admin_broadcast');
         }
       });
@@ -236,8 +236,12 @@ export const AdminChat: React.FC<{
       
       // Mark as read
       msgs.forEach(msg => {
-        if (msg.receiverId === user.uid && !msg.read) {
-          updateDoc(doc(db, 'messages', msg.id), { read: true });
+        if (msg.receiverId === (user.uid || user.id) && !msg.read) {
+          try {
+            updateDoc(doc(db, 'messages', msg.id), { read: true });
+          } catch (e) {
+            console.warn("Error marking message as read:", e);
+          }
         }
       });
 
@@ -498,8 +502,8 @@ export const AdminChat: React.FC<{
       {isAdmin && (!activeChatId || !isMobile) && (
         <div className="w-full sm:w-80 border-r border-gray-100 flex flex-col bg-gray-50/50">
           <div className="p-6 border-b border-gray-100 bg-white">
-            <h3 className="text-xl font-bold flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" /> Suhbatlar
+            <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-2">
+              <Users className="w-5 h-5 text-black" /> Suhbatlar
             </h3>
           </div>
           <ScrollArea className="flex-1">
@@ -509,15 +513,15 @@ export const AdminChat: React.FC<{
                 <button
                   onClick={() => setActiveChatId(adminUser.uid)}
                   className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${
-                    activeChatId === adminUser.uid ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-blue-50 hover:bg-blue-100'
+                    activeChatId === adminUser.uid ? 'bg-gold text-white shadow-lg shadow-gold/10' : 'bg-gold/5 hover:bg-gold/10'
                   }`}
                 >
                   <Avatar className="w-12 h-12 border-2 border-white">
-                    <AvatarFallback className="bg-blue-600 text-white font-bold">A</AvatarFallback>
+                    <AvatarFallback className="bg-gold text-white font-bold italic">A</AvatarFallback>
                   </Avatar>
                   <div className="text-left flex-1 min-w-0">
-                    <p className="font-bold truncate">ADMIN (Asosiy)</p>
-                    <p className={`text-xs truncate ${activeChatId === adminUser.uid ? 'text-blue-100' : 'text-blue-600'}`}>
+                    <p className="font-black italic uppercase tracking-tighter truncate">ADMIN (Asosiy)</p>
+                    <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${activeChatId === adminUser.uid ? 'text-white/80' : 'text-gold'}`}>
                       Tizim administratori
                     </p>
                   </div>
@@ -529,13 +533,13 @@ export const AdminChat: React.FC<{
                   key={u.id}
                   onClick={() => setActiveChatId(u.uid)}
                   className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all group ${
-                    activeChatId === u.uid ? 'bg-blue-600 shadow-lg shadow-blue-100' : 'hover:bg-gray-100'
+                    activeChatId === u.uid ? 'bg-gold shadow-lg shadow-gold/20' : 'hover:bg-gray-100'
                   }`}
                 >
                   <div className="relative shrink-0">
-                    <Avatar className={`w-12 h-12 border-2 ${activeChatId === u.uid ? 'border-blue-400' : 'border-white'}`}>
+                    <Avatar className={`w-12 h-12 border-2 ${activeChatId === u.uid ? 'border-gold/40' : 'border-white'}`}>
                       <AvatarImage src={u.photoURL} className="object-cover" />
-                      <AvatarFallback className={activeChatId === u.uid ? 'bg-blue-500 text-white font-bold' : 'bg-gray-200'}>
+                      <AvatarFallback className={activeChatId === u.uid ? 'bg-gold-dark text-white font-bold' : 'bg-gray-200'}>
                         {u.displayName?.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
@@ -545,16 +549,16 @@ export const AdminChat: React.FC<{
                   </div>
                   <div className="text-left flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-0.5">
-                      <h5 className={`font-bold truncate text-sm ${activeChatId === u.uid ? 'text-white' : 'text-gray-900 group-hover:text-blue-600'}`}>
+                      <h5 className={`font-black italic uppercase tracking-tighter truncate text-sm ${activeChatId === u.uid ? 'text-white' : 'text-gray-900 group-hover:text-gold'}`}>
                         {u.displayName}
                       </h5>
                       {lastMessages[u.uid] && (
-                        <span className={`text-[10px] shrink-0 font-medium ${activeChatId === u.uid ? 'text-blue-100' : 'text-gray-400'}`}>
+                        <span className={`text-[10px] shrink-0 font-medium ${activeChatId === u.uid ? 'text-white/60' : 'text-gray-400'}`}>
                           {lastMessages[u.uid].createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
                     </div>
-                    <p className={`text-xs truncate font-medium ${activeChatId === u.uid ? 'text-blue-100' : 'text-gray-500'}`}>
+                    <p className={`text-[10px] uppercase tracking-widest font-bold truncate ${activeChatId === u.uid ? 'text-white/80' : 'text-gray-500'}`}>
                       {lastMessages[u.uid] ? (
                         lastMessages[u.uid].type === 'text' ? lastMessages[u.uid].text : 
                         lastMessages[u.uid].type === 'image' ? '📸 Rasm' :
@@ -564,7 +568,7 @@ export const AdminChat: React.FC<{
                     </p>
                   </div>
                   {unreadCounts[u.uid] > 0 && activeChatId !== u.uid && (
-                    <Badge className="bg-blue-600 text-white border-none text-[10px] px-1.5 min-w-[20px] h-5 flex items-center justify-center rounded-full shadow-sm ring-2 ring-white">
+                    <Badge className="bg-gold text-white border-none text-[10px] px-1.5 min-w-[20px] h-5 flex items-center justify-center rounded-full shadow-sm ring-2 ring-white">
                       {unreadCounts[u.uid]}
                     </Badge>
                   )}
@@ -588,7 +592,7 @@ export const AdminChat: React.FC<{
                   </Button>
                 )}
                 <Avatar className="w-10 h-10">
-                  <AvatarFallback className="bg-blue-100 text-blue-600">
+                  <AvatarFallback className="bg-gold/10 text-gold font-black italic">
                     {isAdmin ? (activeUser?.displayName?.charAt(0) || 'U') : 'A'}
                   </AvatarFallback>
                 </Avatar>
@@ -640,8 +644,8 @@ export const AdminChat: React.FC<{
                         <div
                           className={`p-4 rounded-3xl shadow-sm ${
                             msg.senderId === user.uid
-                              ? 'bg-blue-600 text-white rounded-tr-none'
-                              : 'bg-gray-100 text-gray-900 rounded-tl-none'
+                              ? 'bg-black dark:bg-white text-white dark:text-black rounded-tr-none shadow-lg'
+                              : 'bg-gray-100 text-gray-900 rounded-tl-none border border-gray-200'
                           }`}
                         >
                           {msg.type === 'text' && <p className="text-sm leading-relaxed">{msg.text}</p>}
@@ -679,7 +683,7 @@ export const AdminChat: React.FC<{
                             {msg.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           {msg.senderId === user.uid && (
-                            <CheckCheck className={`w-3 h-3 ${msg.read ? 'text-blue-500' : 'text-gray-300'}`} />
+                            <CheckCheck className={`w-3 h-3 ${msg.read ? 'text-gold font-black' : 'text-gray-300'}`} />
                           )}
                         </div>
                       </div>
@@ -719,7 +723,7 @@ export const AdminChat: React.FC<{
                             <button
                               key={color}
                               onClick={() => setDrawColor(color)}
-                              className={`w-8 h-8 rounded-full border-2 ${drawColor === color ? 'border-blue-600 scale-110' : 'border-transparent'}`}
+                              className={`w-8 h-8 rounded-full border-2 ${drawColor === color ? 'border-gold scale-110' : 'border-transparent'}`}
                               style={{ backgroundColor: color }}
                             />
                           ))}
@@ -754,7 +758,7 @@ export const AdminChat: React.FC<{
                           <Button onClick={applyText} variant="outline" className="rounded-xl">
                             Matnni qo'shish
                           </Button>
-                          <Button onClick={saveEditedImage} className="bg-blue-600 hover:bg-blue-700 rounded-xl px-6">
+                          <Button onClick={saveEditedImage} className="bg-gold hover:bg-gold-light rounded-xl px-6 text-white font-bold">
                             Yuborish
                           </Button>
                         </div>
@@ -802,7 +806,7 @@ export const AdminChat: React.FC<{
               <div className="flex items-center gap-2">
                 <div className="flex gap-1">
                   <div className="relative">
-                    <Button variant="ghost" size="icon" className="rounded-full hover:bg-blue-50 hover:text-blue-600" title="Rasm/Fayl">
+                    <Button variant="ghost" size="icon" className="rounded-full hover:bg-gold/5 hover:text-gold" title="Rasm/Fayl">
                       <Paperclip className="w-5 h-5" />
                     </Button>
                     <input type="file" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
@@ -811,7 +815,7 @@ export const AdminChat: React.FC<{
                     variant="ghost" 
                     size="icon" 
                     onClick={() => startRecording('video')} 
-                    className={`rounded-full hover:bg-blue-50 hover:text-blue-600 ${isRecording && recordingType === 'video' ? 'text-red-500 bg-red-50' : ''}`}
+                    className={`rounded-full hover:bg-gold/5 hover:text-gold ${isRecording && recordingType === 'video' ? 'text-red-500 bg-red-50' : ''}`}
                     title="Video xabar"
                   >
                     <Video className="w-5 h-5" />
@@ -820,7 +824,7 @@ export const AdminChat: React.FC<{
                     variant="ghost" 
                     size="icon" 
                     onClick={() => startRecording('round_video')} 
-                    className={`rounded-full hover:bg-blue-50 hover:text-blue-600 ${isRecording && recordingType === 'round_video' ? 'text-red-500 bg-red-50' : ''}`}
+                    className={`rounded-full hover:bg-gold/5 hover:text-gold ${isRecording && recordingType === 'round_video' ? 'text-red-500 bg-red-50' : ''}`}
                     title="Dumaloq video"
                   >
                     <CirclePlay className="w-5 h-5" />
@@ -831,12 +835,12 @@ export const AdminChat: React.FC<{
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                   placeholder="Xabar yozing..."
-                  className="flex-1 rounded-2xl py-6 bg-gray-50 border-none focus-visible:ring-blue-600"
+                  className="flex-1 rounded-2xl py-6 bg-gray-50 border-none focus-visible:ring-gold"
                 />
                 <Button 
                   onClick={() => sendMessage()}
                   disabled={!inputText.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl w-12 h-12 p-0 flex items-center justify-center shadow-lg shadow-blue-100"
+                  className="bg-gold hover:bg-gold-light text-white rounded-2xl w-12 h-12 p-0 flex items-center justify-center shadow-lg shadow-gold/20"
                 >
                   <Send className="w-5 h-5" />
                 </Button>
@@ -845,8 +849,8 @@ export const AdminChat: React.FC<{
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-gray-50/30">
-            <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6">
-              <MessageSquare className="w-12 h-12 text-blue-300" />
+            <div className="w-24 h-24 bg-gold/5 rounded-full flex items-center justify-center mb-6">
+              <MessageSquare className="w-12 h-12 text-gold/30" />
             </div>
             <h3 className="text-2xl font-bold text-gray-900">Suhbatni boshlang</h3>
             <p className="text-gray-500 max-w-xs mt-2">

@@ -53,14 +53,6 @@ const materials = [
   { id: 'stainless', name: 'Zanglamas po\'lat', description: 'Abadiy ko\'rinish', quality: 'Luxe' },
 ];
 
-const features = [
-  { id: 'auto', name: 'Avtomatika (motor)', icon: Settings2 },
-  { id: 'intercom', name: 'Domofon o\'rnatish', icon: Phone },
-  { id: 'mailbox', name: 'Pochta qutisi', icon: FileText },
-  { id: 'gold', name: 'Oltin rangli detallar', icon: Sparkles },
-  { id: 'galvanized', name: 'Ruxlash (Galvanized)', icon: ShieldCheck },
-];
-
 export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose, initialCategory }) => {
   const [step, setStep] = useState(1);
   const [firstName, setFirstName] = useState(user?.firstName || '');
@@ -74,7 +66,6 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [style, setStyle] = useState(product?.style || 'modern');
   const [material, setMaterial] = useState('steel');
-  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [designImage, setDesignImage] = useState<string | null>(product?.imageUrl || null);
   const [siteImage, setSiteImage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -92,12 +83,6 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
     }
   };
 
-  const toggleFeature = (id: string) => {
-    setSelectedFeatures(prev => 
-      prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
-    );
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firstName || !lastName || !phone) {
@@ -110,11 +95,11 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
       const orderRef = await addDoc(collection(db, 'orders'), {
         productId: product?.id || 'custom',
         productName: product?.name || initialCategory || 'Maxsus buyurtma',
-        masterId: user.uid,
-        masterName: `${firstName} ${lastName}`,
+        userId: user.uid,
+        userName: `${firstName} ${lastName}`,
         firstName,
         lastName,
-        masterPhone: phone,
+        phone: phone,
         width: width ? Number(width) : null,
         height: height ? Number(height) : null,
         totalArea: totalArea || null,
@@ -125,7 +110,6 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
         paymentMethod,
         style,
         material,
-        customFeatures: selectedFeatures,
         description,
         status: 'pending',
         createdAt: serverTimestamp()
@@ -171,34 +155,34 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
                     key={s.id}
                     onClick={() => setStyle(s.id)}
                     className={`p-4 rounded-2xl border-2 cursor-pointer transition-all hover:shadow-md ${
-                      style === s.id ? 'border-blue-600 bg-blue-50' : 'border-gray-100 bg-gray-50'
+                      style === s.id ? 'border-gold bg-gold/5 shadow-lg shadow-gold/10' : 'border-gray-100 bg-gray-50'
                     }`}
                   >
                     <div className="text-2xl mb-1">{s.icon}</div>
-                    <p className="font-bold text-sm text-gray-900">{s.name}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">{s.description}</p>
+                    <p className="font-bold text-sm text-gray-900 italic tracking-tight">{s.name}</p>
+                    <p className="text-[10px] text-gray-400 mt-1 uppercase font-black tracking-widest">{s.description}</p>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="space-y-4">
-              <Label className="text-sm font-bold uppercase tracking-widest text-gray-500">Dizayn rasmi (ixtiyoriy)</Label>
-              <div className="relative aspect-video rounded-3xl bg-gray-50 border-2 border-dashed border-gray-200 overflow-hidden group hover:border-blue-400 transition-colors">
+              <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1 italic text-gray-500">Dizayn rasmi (ixtiyoriy)</Label>
+              <div className="relative aspect-video rounded-3xl bg-gray-50 border-2 border-dashed border-gold/10 overflow-hidden group hover:border-gold/30 transition-colors">
                 {designImage ? (
                   <div className="relative w-full h-full">
                     <img src={designImage} alt="Design" className="w-full h-full object-cover" />
                     <button 
                       onClick={(e) => { e.stopPropagation(); setDesignImage(null); }}
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-4 right-4 bg-red-500 text-white rounded-xl p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity active:scale-90"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-                    <ImageIcon className="w-8 h-8" />
-                    <span className="text-xs font-medium">O'zingiz xohlagan rasm bo'lsa, yuklang</span>
+                  <div className="flex flex-col items-center justify-center h-full text-gold/30 gap-3">
+                    <ImageIcon className="w-10 h-10" />
+                    <span className="text-[10px] font-black uppercase tracking-widest italic">O'zingiz xohlagan rasm bo'lsa, yuklang</span>
                   </div>
                 )}
                 <input 
@@ -221,8 +205,8 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
           >
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="width" className="flex items-center gap-2">
-                  <Ruler className="w-4 h-4 text-gray-400" />
+                <Label htmlFor="width" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 italic">
+                  <Ruler className="w-3.5 h-3.5 text-gold/40" />
                   Eni (metr)
                 </Label>
                 <Input
@@ -231,13 +215,13 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
                   step="0.01"
                   value={width}
                   onChange={(e) => setWidth(e.target.value)}
-                  placeholder="Masalan: 3.5"
-                  className="rounded-xl h-12"
+                  placeholder="3.5"
+                  className="rounded-2xl h-14 bg-gray-50 border-none focus-visible:ring-gold/20"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="height" className="flex items-center gap-2">
-                  <Ruler className="w-4 h-4 text-gray-400 rotate-90" />
+                <Label htmlFor="height" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 italic">
+                  <Ruler className="w-3.5 h-3.5 text-gold/40 rotate-90" />
                   Bo'yi (metr)
                 </Label>
                 <Input
@@ -246,50 +230,29 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
                   step="0.01"
                   value={height}
                   onChange={(e) => setHeight(e.target.value)}
-                  placeholder="Masalan: 2.2"
-                  className="rounded-xl h-12"
+                  placeholder="2.2"
+                  className="rounded-2xl h-14 bg-gray-50 border-none focus-visible:ring-gold/20"
                 />
               </div>
             </div>
 
             <div className="space-y-4">
-              <Label className="text-sm font-bold uppercase tracking-widest text-gray-500">Materialni tanlang</Label>
-              <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1 italic text-gray-500">Materialni tanlang</Label>
+              <div className="space-y-3">
                 {materials.map((m) => (
                   <div 
                     key={m.id}
                     onClick={() => setMaterial(m.id)}
-                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
-                      material === m.id ? 'border-blue-600 bg-blue-50' : 'border-gray-100 hover:bg-gray-50'
+                    className={`p-5 rounded-[1.5rem] border-2 cursor-pointer transition-all flex items-center justify-between group h-20 ${
+                      material === m.id ? 'border-gold bg-gold/5 shadow-lg shadow-gold/10' : 'border-gray-100 hover:bg-gray-50'
                     }`}
                   >
                     <div>
-                      <p className="font-bold text-sm text-gray-900">{m.name}</p>
-                      <p className="text-[10px] text-gray-400">{m.description}</p>
+                      <p className={`font-black uppercase italic tracking-tighter text-base transition-colors ${material === m.id ? 'text-gold' : 'text-gray-900 group-hover:text-gold'}`}>{m.name}</p>
+                      <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mt-0.5">{m.description}</p>
                     </div>
-                    <Badge variant="outline" className="bg-white text-[10px] uppercase">{m.quality}</Badge>
+                    <Badge variant="outline" className={`border-none px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest italic ${material === m.id ? 'bg-gold text-white shadow-lg' : 'bg-gray-100 text-gray-400'}`}>{m.quality}</Badge>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <Label className="text-sm font-bold uppercase tracking-widest text-gray-500">Qo'shimcha funksiyalar</Label>
-              <div className="flex flex-wrap gap-2">
-                {features.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => toggleFeature(f.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all ${
-                      selectedFeatures.includes(f.id) 
-                        ? 'bg-blue-600 text-white border-blue-600' 
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'
-                    }`}
-                  >
-                    <f.icon className="w-4 h-4" />
-                    {f.name}
-                  </button>
                 ))}
               </div>
             </div>
@@ -305,13 +268,13 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
           >
             <div className="space-y-4">
               <Label className="text-sm font-bold uppercase tracking-widest text-gray-500">O'rnatish joyi rasmi</Label>
-              <div className="relative aspect-video rounded-3xl bg-gray-50 border-2 border-dashed border-gray-200 overflow-hidden hover:border-blue-400 transition-colors">
+              <div className="relative aspect-video rounded-[2.5rem] bg-gray-50 border-2 border-dashed border-gold/10 overflow-hidden hover:border-gold/30 transition-colors group">
                 {siteImage ? (
                   <img src={siteImage} alt="Site" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-                    <MapPin className="w-8 h-8" />
-                    <span className="text-xs font-medium">O'rnatish joyini suratga olib yuklang</span>
+                  <div className="flex flex-col items-center justify-center h-full text-gold/30 gap-3">
+                    <MapPin className="w-10 h-10" />
+                    <span className="text-[10px] font-black uppercase tracking-widest italic tracking-tight">O'rnatish joyini suratga olib yuklang</span>
                   </div>
                 )}
                 <input 
@@ -324,38 +287,38 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
             </div>
 
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">Joylashuv turi</Label>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 italic">Joylashuv turi</Label>
               <Select value={locationType} onValueChange={setLocationType}>
-                <SelectTrigger className="rounded-2xl h-12">
+                <SelectTrigger className="rounded-2xl h-14 bg-gray-50 border-none focus:ring-gold/20 font-bold italic uppercase text-xs">
                   <SelectValue placeholder="Joyni tanlang" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="home">Shaxsiy hovli</SelectItem>
-                  <SelectItem value="work">Sanoat hududi / Idora</SelectItem>
-                  <SelectItem value="other">Boshqa</SelectItem>
+                <SelectContent className="rounded-2xl border-gold/10">
+                  <SelectItem value="home">SHAXSIY HOVLI</SelectItem>
+                  <SelectItem value="work">SANOAT HUDUDI / IDORA</SelectItem>
+                  <SelectItem value="other">BOSHQA</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">To'liq manzil</Label>
+              <Label htmlFor="address" className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 italic">To'liq manzil</Label>
               <Input
                 id="address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Viloyat, tuman, ko'cha, uy raqami"
-                className="rounded-2xl h-12"
+                className="rounded-2xl h-14 bg-gray-50 border-none focus-visible:ring-gold/20 font-medium"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Qo'shimcha izohlar</Label>
+              <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 italic">Qo'shimcha izohlar</Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Buyurtma bo'yicha boshqa istaklaringizni yozing..."
-                className="rounded-2xl min-h-[100px] p-4"
+                className="rounded-[1.5rem] min-h-[120px] p-6 bg-gray-50 border-none focus-visible:ring-gold/20 font-medium italic"
               />
             </div>
           </motion.div>
@@ -366,71 +329,78 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
+            className="space-y-8"
           >
-            <div className="flex flex-col items-center justify-center py-4 gap-2">
-              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 mb-2">
-                <CheckCircle2 className="w-8 h-8" />
+            <div className="flex flex-col items-center justify-center py-6 gap-3 bg-gold/5 rounded-[2.5rem] border border-gold/10">
+              <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center text-gold transform rotate-12">
+                <CheckCircle2 className="w-10 h-10" />
               </div>
-              <h4 className="text-xl font-bold">Yakuniy qadam</h4>
-              <p className="text-sm text-gray-500 text-center">Buyurtmani tasdiqlash uchun aloqa ma'lumotlarini kiriting</p>
+              <div className="text-center">
+                <h4 className="text-2xl font-black italic uppercase tracking-tighter text-gray-900">YAKUNIY QADAM</h4>
+                <p className="text-[10px] font-black uppercase text-gold tracking-widest mt-1">Siz bilan bog'lanishimiz uchun</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName">Ism</Label>
+                <Label htmlFor="firstName" className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 italic">Ism</Label>
                 <Input
                   id="firstName"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="Ism"
                   required
-                  className="rounded-2xl h-12"
+                  className="rounded-2xl h-14 bg-gray-50 border-none focus-visible:ring-gold/20 font-medium"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Familiya</Label>
+                <Label htmlFor="lastName" className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 italic">Familiya</Label>
                 <Input
                   id="lastName"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Familiya"
                   required
-                  className="rounded-2xl h-12"
+                  className="rounded-2xl h-14 bg-gray-50 border-none focus-visible:ring-gold/20 font-medium"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Telefon raqami</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+998 90 123 45 67"
-                required
-                className="rounded-2xl h-12"
-              />
+              <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 italic">Telefon raqami</Label>
+              <div className="relative">
+                <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gold/40" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+998"
+                  required
+                  className="pl-12 rounded-2xl h-14 bg-gray-50 border-none focus-visible:ring-gold/20 font-medium"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label>To'lov usuli (kelishiladi)</Label>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 italic">To'lov usuli (kelishiladi)</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger className="rounded-2xl h-12">
+                <SelectTrigger className="rounded-2xl h-14 bg-gray-50 border-none focus:ring-gold/20 font-black italic uppercase text-xs">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Naqd pul</SelectItem>
-                  <SelectItem value="card">Click / Payme</SelectItem>
-                  <SelectItem value="transfer">Bank o'tkazmasi</SelectItem>
+                <SelectContent className="rounded-2xl border-gold/10">
+                  <SelectItem value="cash">NAQD PUL</SelectItem>
+                  <SelectItem value="card">CLICK / PAYME</SelectItem>
+                  <SelectItem value="transfer">BANK O'TKAZMASI</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-green-600 mt-1" />
-              <p className="text-[10px] text-gray-500">
+            <div className="p-6 bg-gold/5 rounded-[2rem] border border-gold/10 flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center text-green-500 shrink-0">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <p className="text-[10px] font-black text-gray-400 uppercase leading-relaxed tracking-widest italic">
                 Sizning ma'lumotlaringiz xafvsiz. Biz faqat buyurtma tafsilotlarini aniqlashtirish uchun aloqaga chiqamiz.
               </p>
             </div>
@@ -443,19 +413,20 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[550px] rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
-        <div className="bg-white flex flex-col max-h-[90vh]">
+      <DialogContent className="sm:max-w-[550px] rounded-[3rem] p-0 overflow-hidden border-none shadow-2xl bg-white">
+        <div className="flex flex-col max-h-[90vh]">
           {/* Header */}
-          <div className="p-8 border-b bg-gray-50/50 flex justify-between items-center">
-            <div>
-              <DialogTitle className="text-2xl font-black text-gray-900 leading-tight">
+          <div className="p-10 border-b border-gold/5 bg-gray-50/50 flex justify-between items-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gold/5 rounded-full blur-3xl -mr-16 -mt-16" />
+            <div className="relative z-10">
+              <DialogTitle className="text-3xl font-black text-gray-900 leading-tight uppercase italic tracking-tighter">
                 {product ? product.name : 'Maxsus Buyurtma'}
               </DialogTitle>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+              <div className="flex items-center gap-4 mt-3">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white bg-gold px-4 py-1.5 rounded-full shadow-lg shadow-gold/20 italic">
                   Step {step} of 4
                 </span>
-                <span className="text-[10px] font-bold text-gray-400">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">
                   {step === 1 && 'Dizayn & Uslub'}
                   {step === 2 && 'O\'lcham & Material'}
                   {step === 3 && 'Manzil & Suratlar'}
@@ -463,40 +434,40 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
                 </span>
               </div>
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1.5 relative z-10">
               {[1, 2, 3, 4].map((s) => (
                 <div 
                   key={s} 
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    s === step ? 'w-8 bg-blue-600' : s < step ? 'w-4 bg-blue-200' : 'w-2 bg-gray-200'
+                  className={`h-2 rounded-full transition-all duration-500 ${
+                    s === step ? 'w-10 bg-gold shadow-lg shadow-gold/30' : s < step ? 'w-5 bg-gold/30' : 'w-3 bg-gray-200'
                   }`}
                 />
               ))}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-8">
+          <div className="flex-1 overflow-y-auto p-10">
             <AnimatePresence mode="wait">
               {renderStep()}
             </AnimatePresence>
           </div>
 
           {/* Footer */}
-          <div className="p-8 border-t bg-white flex items-center justify-between gap-4">
+          <div className="p-10 border-t border-gold/5 bg-white flex items-center justify-between gap-6">
             {step > 1 ? (
               <Button 
                 variant="ghost" 
                 onClick={prevStep}
-                className="rounded-2xl px-6 py-6 font-bold text-gray-500 hover:bg-gray-100 flex items-center gap-2"
+                className="rounded-[1.5rem] h-16 px-8 font-black uppercase text-[10px] tracking-widest text-gray-400 hover:bg-gray-50 hover:text-gold flex items-center gap-3 transition-all"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="w-5 h-5" />
                 Orqaga
               </Button>
             ) : (
               <Button 
                 variant="ghost" 
                 onClick={onClose}
-                className="rounded-2xl px-6 py-6 font-bold text-gray-400 hover:bg-gray-50 flex items-center gap-2"
+                className="rounded-[1.5rem] h-16 px-8 font-black uppercase text-[10px] tracking-widest text-gray-300 hover:bg-gray-50 flex items-center gap-3 transition-all"
               >
                 Yopish
               </Button>
@@ -505,7 +476,7 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
             {step < 4 ? (
               <Button 
                 onClick={nextStep}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-6 font-black text-lg shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2"
+                className="flex-1 bg-gold hover:bg-gold-light text-white rounded-[1.5rem] h-16 font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl shadow-gold/30 flex items-center justify-center gap-3 transform active:scale-95 transition-all"
               >
                 Keyingi
                 <ArrowRight className="w-5 h-5" />
@@ -514,14 +485,14 @@ export const OrderDialog: React.FC<OrderDialogProps> = ({ product, user, onClose
               <Button 
                 onClick={handleSubmit} 
                 disabled={submitting}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-2xl py-6 font-black text-lg shadow-xl shadow-green-500/20 flex items-center justify-center gap-2"
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[1.5rem] h-16 font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl shadow-emerald-500/30 flex items-center justify-center gap-3 transform active:scale-95 transition-all"
               >
                 {submitting ? (
                   <RefreshCw className="w-5 h-5 animate-spin" />
                 ) : (
                   <>
                     Tasdiqlash
-                    <CheckCircle2 className="w-5 h-5" />
+                    <CheckCircle2 className="w-6 h-6" />
                   </>
                 )}
               </Button>

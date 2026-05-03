@@ -137,7 +137,7 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-black tracking-tight text-gray-900 flex items-center gap-2">
-            <Layers className="w-8 h-8 text-blue-600" />
+            <Layers className="w-8 h-8 text-gold" />
             Jarayonlar (Process)
           </h2>
           <p className="text-gray-500">Ish oqimlarini boshqarish va kuzatish</p>
@@ -146,16 +146,16 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
         {isAdmin && (
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger render={
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-6 h-14 font-bold shadow-xl shadow-blue-100 gap-2">
+            <Button className="bg-gold hover:bg-gold-light text-white rounded-2xl px-6 h-14 font-bold shadow-xl shadow-gold/20 gap-2">
               <Plus className="w-5 h-5" />
               Ish oqimi qo'shish (Add workflow)
             </Button>
           } />
           <DialogContent className="rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl max-w-lg">
-            <div className="bg-blue-600 p-8 text-white">
+            <div className="bg-gold p-8 text-white">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-black">Yangi ish oqimi</DialogTitle>
-                <CardDescription className="text-blue-100 font-medium opacity-80">Workflow ma'lumotlarini kiriting</CardDescription>
+                <CardDescription className="text-gold-light font-medium opacity-80">Workflow ma'lumotlarini kiriting</CardDescription>
               </DialogHeader>
             </div>
             <div className="p-8 space-y-6">
@@ -166,7 +166,7 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
                     value={name} 
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Workflow nomini kiriting"
-                    className="h-14 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-blue-600 transition-all"
+                    className="h-14 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-gold transition-all"
                   />
                 </div>
                 <div className="space-y-2">
@@ -175,7 +175,7 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
                     value={direction} 
                     onChange={(e) => setDirection(e.target.value)}
                     placeholder="Ish yo'nalishini kiriting"
-                    className="h-14 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-blue-600 transition-all"
+                    className="h-14 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-gold transition-all"
                   />
                 </div>
                 <div className="space-y-2">
@@ -184,7 +184,7 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
                     value={assignedUser} 
                     onChange={(e) => setAssignedUser(e.target.value)}
                     placeholder="Mas'ul foydalanuvchini kiriting"
-                    className="h-14 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-blue-600 transition-all"
+                    className="h-14 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-gold transition-all"
                   />
                 </div>
                 <div className="space-y-2">
@@ -193,14 +193,14 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
                     type="datetime-local"
                     value={startTime} 
                     onChange={(e) => setStartTime(e.target.value)}
-                    className="h-14 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-blue-600 transition-all"
+                    className="h-14 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-gold transition-all"
                   />
                 </div>
               </div>
             </div>
             <DialogFooter className="p-8 bg-gray-50 gap-3 border-t">
               <Button variant="outline" onClick={() => setIsAddOpen(false)} className="rounded-xl h-12 px-6">Bekor qilish</Button>
-              <Button onClick={handleSaveWorkflow} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-12 px-8 font-bold">
+              <Button onClick={handleSaveWorkflow} disabled={loading} className="bg-gold hover:bg-gold-light text-white rounded-xl h-12 px-8 font-bold">
                 {loading ? "Saqlanmoqda..." : "Saqlash (Save)"}
               </Button>
             </DialogFooter>
@@ -219,7 +219,7 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
               exit={{ opacity: 0, scale: 0.95 }}
             >
               <Card className="rounded-3xl border-none shadow-xl overflow-hidden group hover:shadow-2xl transition-all">
-                <div className={`h-2 ${wf.status === 'running' ? 'bg-green-500' : wf.status === 'completed' ? 'bg-blue-500' : 'bg-orange-500'}`} />
+                <div className={`h-2 ${wf.status === 'running' ? 'bg-green-500' : wf.status === 'completed' ? 'bg-gold' : 'bg-orange-500'}`} />
                 <CardHeader className="p-6">
                   <div className="flex justify-between items-start">
                     <div className="space-y-1">
@@ -240,7 +240,7 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
                     {/* Yo'nalish Section */}
                     <div className="flex items-center justify-between group/field">
                       <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                        <div className="w-8 h-8 rounded-lg bg-gold/5 flex items-center justify-center text-gold">
                           <Navigation className="w-4 h-4" />
                         </div>
                         <div>
@@ -269,7 +269,7 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
                                   const val = (document.getElementById(`dir-${wf.id}`) as HTMLInputElement).value;
                                   updateWorkflowField(wf.id, 'direction', val);
                                 }}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold"
+                                className="w-full bg-gold hover:bg-gold-light text-white rounded-xl font-bold"
                               >
                                 Saqlash (Save)
                               </Button>
@@ -311,7 +311,7 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
                                   const val = (document.getElementById(`user-${wf.id}`) as HTMLInputElement).value;
                                   updateWorkflowField(wf.id, 'assignedUser', val);
                                 }}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold"
+                                className="w-full bg-gold hover:bg-gold-light text-white rounded-xl font-bold"
                               >
                                 Saqlash (Save)
                               </Button>
@@ -353,7 +353,7 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
                                   const val = (document.getElementById(`time-${wf.id}`) as HTMLInputElement).value;
                                   updateWorkflowField(wf.id, 'startTime', val);
                                 }}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold"
+                                className="w-full bg-gold hover:bg-gold-light text-white rounded-xl font-bold"
                               >
                                 Saqlash (Save)
                               </Button>
@@ -368,14 +368,14 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
                     <Dialog>
                       <DialogTrigger render={
                         <Button 
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-6 font-bold gap-2 mt-4 shadow-xl shadow-blue-100"
+                          className="w-full bg-gold hover:bg-gold-light text-white rounded-xl py-6 font-bold gap-2 mt-4 shadow-xl shadow-gold/20"
                         >
                           <Play className="w-4 h-4" />
                           Boshlash (Start)
                         </Button>
                       } />
                       <DialogContent className="rounded-[2.5rem] p-8 max-w-sm text-center">
-                        <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 mx-auto mb-6">
+                        <div className="w-20 h-20 bg-gold/5 rounded-full flex items-center justify-center text-gold mx-auto mb-6">
                           <Play className="w-10 h-10 ml-1" />
                         </div>
                         <DialogHeader>
@@ -385,7 +385,7 @@ export const WorkflowManager: React.FC<{ user: any }> = ({ user }) => {
                         <DialogFooter className="flex-col gap-3 mt-8">
                           <Button 
                             onClick={() => startWorkflow(wf.id)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl h-14 font-bold w-full"
+                            className="bg-gold hover:bg-gold-light text-white rounded-2xl h-14 font-bold w-full"
                           >
                             Saqlash (Save)
                           </Button>

@@ -124,7 +124,7 @@ export const CraftsmanProfiles: React.FC<CraftsmanProfilesProps> = ({ user }) =>
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -151,7 +151,7 @@ export const CraftsmanProfiles: React.FC<CraftsmanProfilesProps> = ({ user }) =>
                 <div className="absolute bottom-4 left-4 right-4">
                   <div className="flex flex-wrap gap-2">
                     {craftsman.specialties.slice(0, 2).map((s, i) => (
-                      <span key={i} className="px-2 py-1 bg-white/90 backdrop-blur-sm text-[10px] font-bold rounded-lg text-blue-600 uppercase tracking-wider">
+                      <span key={i} className="px-2 py-1 bg-white/90 backdrop-blur-sm text-[10px] font-bold rounded-lg text-gold uppercase tracking-wider">
                         {s}
                       </span>
                     ))}
@@ -160,7 +160,7 @@ export const CraftsmanProfiles: React.FC<CraftsmanProfilesProps> = ({ user }) =>
               </div>
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-xl font-bold group-hover:text-blue-600 transition-colors">{craftsman.name}</CardTitle>
+                  <CardTitle className="text-xl font-bold group-hover:text-gold transition-colors">{craftsman.name}</CardTitle>
                   {renderStars(craftsman.rating)}
                 </div>
                 <CardDescription className="line-clamp-2 mt-1">{craftsman.bio}</CardDescription>
@@ -223,7 +223,7 @@ export const CraftsmanProfiles: React.FC<CraftsmanProfilesProps> = ({ user }) =>
 
                       <div className="flex flex-wrap gap-2">
                         {selectedCraftsman.specialties.map((s, i) => (
-                          <span key={i} className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full uppercase tracking-wider">
+                          <span key={i} className="px-3 py-1 bg-gold/5 text-gold text-xs font-bold rounded-full uppercase tracking-wider">
                             {s}
                           </span>
                         ))}
@@ -231,7 +231,7 @@ export const CraftsmanProfiles: React.FC<CraftsmanProfilesProps> = ({ user }) =>
 
                       <div className="space-y-2">
                         <h4 className="font-bold text-gray-900 flex items-center gap-2">
-                          <User className="w-4 h-4 text-blue-600" />
+                          <User className="w-4 h-4 text-gold" />
                           Mutaxassis haqida
                         </h4>
                         <p className="text-gray-600 leading-relaxed">{selectedCraftsman.bio}</p>
@@ -241,7 +241,7 @@ export const CraftsmanProfiles: React.FC<CraftsmanProfilesProps> = ({ user }) =>
 
                   <div className="bg-gray-50 p-8 border-l border-gray-100 flex flex-col h-full">
                     <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-6">
-                      <MessageSquare className="w-4 h-4 text-blue-600" />
+                      <MessageSquare className="w-4 h-4 text-gold" />
                       Mijozlar fikri
                     </h4>
 
@@ -282,9 +282,9 @@ export const CraftsmanProfiles: React.FC<CraftsmanProfilesProps> = ({ user }) =>
                         value={newReview.comment}
                         onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
                         placeholder="Fikringizni yozing..."
-                        className="min-h-[80px] rounded-2xl border-gray-100 focus:ring-blue-500"
+                        className="min-h-[80px] rounded-2xl border-gray-100 focus:ring-gold"
                       />
-                      <Button onClick={handleSubmitReview} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
+                      <Button onClick={handleSubmitReview} className="w-full bg-gold hover:bg-gold-light text-white rounded-xl">
                         Yuborish
                       </Button>
                     </div>

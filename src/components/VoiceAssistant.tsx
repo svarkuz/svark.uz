@@ -303,7 +303,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ activeTab, setAc
     return (
       <Button 
         onClick={() => setIsVoiceMode(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-2xl z-50 p-0 flex items-center justify-center group border-4 border-white"
+        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-gold hover:bg-gold-light shadow-2xl z-50 p-0 flex items-center justify-center group border-4 border-white"
       >
         <Mic className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
       </Button>
@@ -318,7 +318,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ activeTab, setAc
       >
         <Button 
           onClick={() => setIsMinimized(false)}
-          className={`w-16 h-16 rounded-full shadow-2xl border-4 border-white ${isListening ? 'bg-red-500 animate-pulse' : 'bg-blue-600'}`}
+          className={`w-16 h-16 rounded-full shadow-2xl border-4 border-white ${isListening ? 'bg-red-500 animate-pulse' : 'bg-gold'}`}
         >
           {isListening ? <MicOff className="w-8 h-8 text-white" /> : <Mic className="w-8 h-8 text-white" />}
         </Button>
@@ -332,12 +332,12 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ activeTab, setAc
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="fixed bottom-24 right-6 left-6 sm:left-auto sm:w-96 bg-white rounded-3xl shadow-2xl z-50 overflow-hidden border border-blue-100"
+        className="fixed bottom-24 right-6 left-6 sm:left-auto sm:w-96 bg-white rounded-3xl shadow-2xl z-50 overflow-hidden border border-gold/10"
       >
-        <div className="p-4 bg-blue-600 text-white flex items-center justify-between">
+        <div className="p-4 bg-gold text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Mic className="w-5 h-5" />
-            <span className="font-bold">Ovozli boshqaruv</span>
+            <span className="font-bold uppercase tracking-widest text-xs italic">Ovozli boshqaruv</span>
           </div>
           <div className="flex items-center gap-1">
             <Button 
@@ -398,7 +398,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ activeTab, setAc
                       animate={{ scale: 1.5, opacity: 0.2 }}
                       exit={{ scale: 0.8, opacity: 0 }}
                       transition={{ repeat: Infinity, duration: 1.5 }}
-                      className="absolute inset-0 bg-blue-400 rounded-full"
+                      className="absolute inset-0 bg-gold rounded-full"
                     />
                   )}
                 </AnimatePresence>
@@ -406,7 +406,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ activeTab, setAc
                   onClick={toggleListening}
                   disabled={isProcessing}
                   className={`w-20 h-20 rounded-full shadow-xl relative z-10 ${
-                    isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'
+                    isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-gold hover:bg-gold-light'
                   }`}
                 >
                   {isProcessing ? (
@@ -430,7 +430,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ activeTab, setAc
             <div className="space-y-4 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
               {transcript && (
                 <div className="flex justify-end">
-                  <div className="bg-blue-50 text-blue-800 p-3 rounded-2xl rounded-tr-none text-sm font-medium">
+                  <div className="bg-gold/10 text-gold-900 px-4 py-2 rounded-2xl rounded-tr-none text-sm font-medium italic border border-gold/5">
                     {transcript}
                   </div>
                 </div>

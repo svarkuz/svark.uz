@@ -128,16 +128,16 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ initialProductImage,
         <div className="flex-1 relative bg-gray-100 overflow-hidden flex items-center justify-center p-4">
           {!bgImageUrl ? (
             <div className="text-center space-y-6 max-w-md">
-              <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                <Camera className="w-12 h-12 text-blue-600" />
+              <div className="w-24 h-24 bg-gold/10 rounded-full flex items-center justify-center mx-auto">
+                <Camera className="w-12 h-12 text-gold" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold">Uyingiz rasmini yuklang</h3>
-                <p className="text-gray-500">Kameradan foydalanib rasmga oling yoki galereyadan tanlang</p>
+                <h3 className="text-xl font-black italic uppercase tracking-tighter text-gray-900">Uyingiz rasmini yuklang</h3>
+                <p className="text-gray-500 font-medium">Kameradan foydalanib rasmga oling yoki galereyadan tanlang</p>
               </div>
               <Button 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-2xl text-lg font-bold"
+                className="w-full bg-gold hover:bg-gold-light text-white py-8 rounded-2xl text-lg font-black italic uppercase tracking-widest shadow-xl shadow-gold/20"
               >
                 Rasm tanlash
               </Button>
@@ -218,7 +218,7 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ initialProductImage,
               </Button>
               <Button 
                 onClick={handleSave}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-8"
+                className="bg-gold hover:bg-gold-light text-white rounded-xl px-8 font-black uppercase tracking-widest shadow-lg shadow-gold/20"
               >
                 Saqlash
               </Button>

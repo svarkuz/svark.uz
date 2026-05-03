@@ -6,15 +6,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sparkles, Send, User, Clock, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, Send, User, Clock, MapPin, ChevronLeft, ChevronRight, ShoppingBag, ShoppingCart } from 'lucide-react';
 
 interface GalleryDetailProps {
   item: any;
   user: any;
   onClose: () => void;
+  addToCart?: (product: any) => void;
 }
 
-export const GalleryDetail: React.FC<GalleryDetailProps> = ({ item, user, onClose }) => {
+export const GalleryDetail: React.FC<GalleryDetailProps> = ({ item, user, onClose, addToCart }) => {
   const [aiDescription, setAiDescription] = useState(item.aiDescription || '');
   const [loadingAi, setLoadingAi] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
@@ -125,29 +126,53 @@ export const GalleryDetail: React.FC<GalleryDetailProps> = ({ item, user, onClos
           {/* Info Section */}
           <div className="lg:w-2/5 flex flex-col bg-white h-full">
             <DialogHeader className="p-6 border-b">
-              <DialogTitle className="text-xl font-bold">{item.title}</DialogTitle>
-              {item.location && (
-                <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                  <MapPin className="w-3 h-3 text-blue-600" /> {item.location}
-                </p>
-              )}
+              <div className="flex items-center justify-between">
+                <div>
+                   <DialogTitle className="text-xl font-black italic uppercase tracking-tighter text-gray-900">{item.title}</DialogTitle>
+                   {item.location && (
+                     <p className="text-sm text-gray-500 font-bold flex items-center gap-1 mt-1">
+                       <MapPin className="w-3 h-3 text-gold" /> {item.location}
+                     </p>
+                   )}
+                 </div>
+                 <Button 
+                   onClick={() => {
+                     if (addToCart) {
+                       addToCart({
+                         id: item.id,
+                         name: item.title,
+                         imageUrl: item.imageUrl,
+                         pricePerSqM: 850000,
+                         category: 'gallery_design'
+                       });
+                     }
+                   }}
+                   className="bg-gold hover:bg-gold-light text-white rounded-[1.25rem] h-12 px-6 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-gold/20 transition-all active:scale-95"
+                 >
+                   <ShoppingCart className="w-4 h-4" />
+                   Buyurtma berish
+                 </Button>
+               </div>
             </DialogHeader>
 
             <ScrollArea className="flex-1 p-6">
               <div className="space-y-8">
                 {/* AI Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-blue-600 font-bold text-sm uppercase tracking-wider">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-gold font-black text-[10px] uppercase tracking-[0.3em]">
                     <Sparkles className="w-4 h-4" />
                     AI Tavsifi
                   </div>
-                  <div className="p-4 bg-blue-50 rounded-2xl text-gray-700 text-sm leading-relaxed border border-blue-100 italic">
+                  <div className="p-6 bg-gray-50 rounded-[2rem] text-gray-600 text-sm leading-relaxed border border-gold/5 italic font-medium shadow-inner relative group/ai">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-gold/20 rounded-full" />
                     {loadingAi ? (
-                      <div className="flex items-center gap-2 animate-pulse">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" />
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]" />
-                        AI o'ylamoqda...
+                      <div className="flex items-center gap-3 animate-pulse">
+                        <div className="flex gap-1.5">
+                          <div className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce" />
+                          <div className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce [animation-delay:0.2s]" />
+                          <div className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce [animation-delay:0.4s]" />
+                        </div>
+                        <span className="font-black uppercase text-[10px] tracking-widest text-gold/40">AI o'ylamoqda...</span>
                       </div>
                     ) : (
                       aiDescription
@@ -156,24 +181,26 @@ export const GalleryDetail: React.FC<GalleryDetailProps> = ({ item, user, onClos
                 </div>
 
                 {/* Comments Section */}
-                <div className="space-y-4">
-                  <div className="font-bold text-gray-900">Fikrlar ({comments.length})</div>
+                <div className="space-y-6">
+                  <div className="font-black text-gray-900 uppercase italic tracking-tight text-sm flex items-center justify-between">
+                    <span>Fikrlar ({comments.length})</span>
+                  </div>
                   
                   <div className="space-y-4">
                     {comments.map((comment) => (
-                      <div key={comment.id} className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                          <User className="w-4 h-4 text-gray-400" />
+                      <div key={comment.id} className="flex gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-gold/5 border border-gold/10 flex items-center justify-center flex-shrink-0 shadow-sm">
+                          <User className="w-5 h-5 text-gold/30" />
                         </div>
-                        <div className="flex-1 space-y-1">
+                        <div className="flex-1 space-y-1.5">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-gray-900">{comment.userName}</span>
-                            <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                            <span className="text-xs font-black text-gray-900 uppercase tracking-tight">{comment.userName}</span>
+                            <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-full">
                               <Clock className="w-3 h-3" />
                               {comment.createdAt?.toDate().toLocaleDateString()}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-2xl rounded-tl-none">
+                          <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-[1.5rem] rounded-tl-none border border-gold/5 font-medium leading-relaxed">
                             {comment.text}
                           </p>
                         </div>
@@ -185,22 +212,22 @@ export const GalleryDetail: React.FC<GalleryDetailProps> = ({ item, user, onClos
             </ScrollArea>
 
             {/* Comment Input */}
-            <div className="p-6 border-t bg-gray-50">
-              <form onSubmit={handleAddComment} className="flex gap-2">
+            <div className="p-8 border-t bg-white">
+              <form onSubmit={handleAddComment} className="flex gap-3">
                 <Input
                   placeholder={user ? "Fikr qoldiring..." : "Fikr qoldirish uchun kiring"}
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   disabled={!user || submittingComment}
-                  className="rounded-xl bg-white"
+                  className="h-14 rounded-2xl bg-gray-50 border-none px-6 focus-visible:ring-1 focus-visible:ring-gold/20 shadow-inner placeholder:text-gray-400 font-medium"
                 />
                 <Button 
                   type="submit" 
                   disabled={!user || submittingComment || !newComment.trim()}
                   size="icon"
-                  className="bg-blue-600 hover:bg-blue-700 rounded-xl flex-shrink-0"
+                  className="bg-gold hover:bg-gold-light rounded-2xl h-14 w-14 flex-shrink-0 shadow-lg shadow-gold/20 transition-all active:scale-90"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-5 h-5 text-white" />
                 </Button>
               </form>
             </div>

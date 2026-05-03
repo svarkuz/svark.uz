@@ -37,7 +37,14 @@ import {
   FileText,
   Download,
   ClipboardList,
-  Wand2
+  Wand2,
+  Calculator,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  Briefcase,
+  Shield,
+  ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -141,7 +148,7 @@ const VideoMessage = ({ src }: { src: string }) => {
           muted={!isFull}
           className={`w-full h-full ${isFull ? 'object-contain' : 'object-cover'}`} 
         />
-        <div className={`absolute inset-0 bg-blue-600/10 flex items-center justify-center transition-opacity ${isFull ? 'opacity-0' : 'opacity-100'}`}>
+        <div className={`absolute inset-0 bg-gold/10 flex items-center justify-center transition-opacity ${isFull ? 'opacity-0' : 'opacity-100'}`}>
           <Video className="w-8 h-8 text-white animate-pulse" />
         </div>
         {isFull && (
@@ -226,6 +233,20 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
     files: []
   });
   const [isProcessingMedia, setIsProcessingMedia] = useState(false);
+  const [tryOnStep, setTryOnStep] = useState<'product' | 'background' | 'interactive'>('product');
+  const [tryOnProduct, setTryOnProduct] = useState<string | null>(null);
+  const [tryOnPos, setTryOnPos] = useState({ x: 50, y: 50 });
+  const [tryOnScale, setTryOnScale] = useState(1);
+  const [tryOnRotation, setTryOnRotation] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleMove = (clientX: number, clientY: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = ((clientX - rect.left) / rect.width) * 100;
+    const y = ((clientY - rect.top) / rect.height) * 100;
+    setTryOnPos({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
+  };
 
   const removeBackgroundUtil = (imageSrc: string): Promise<string> => {
     return new Promise((resolve) => {
@@ -361,7 +382,8 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const chatVideoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatTopRef = useRef<HTMLDivElement>(null);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
   const chatImageInputRef = useRef<HTMLInputElement>(null);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
   const captureCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -514,7 +536,7 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
   }, []);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const startCamera = async () => {
@@ -643,8 +665,16 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
       } else {
         const docRef = await addDoc(collection(db, 'ai_chats'), {
           userId: user.uid,
-          title: updatedMessages.find(m => m.role === 'user')?.text?.substring(0, 30) || 'Yangi suhbat',
-          messages: updatedMessages,
+          title: (updatedMessages.find(m => m.role === 'user')?.text || 'Yangi suhbat').substring(0, 50),
+          messages: updatedMessages.map(m => {
+            const cleanMsg: any = { role: m.role, text: m.text || '' };
+            if (m.image) cleanMsg.image = m.image;
+            if (m.mediaUrl) cleanMsg.mediaUrl = m.mediaUrl;
+            if (m.mediaType) cleanMsg.mediaType = m.mediaType;
+            if (m.fileName) cleanMsg.fileName = m.fileName;
+            if (m.type) cleanMsg.type = m.type;
+            return cleanMsg;
+          }),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
@@ -730,10 +760,10 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
     const newMessages = [...messages, { 
       role: 'user', 
       text: userMsg, 
-      image: currentImage,
-      mediaUrl: currentFile?.url,
-      fileName: currentFile?.name,
-      type: currentFile ? 'file' : undefined
+      ...(currentImage && { image: currentImage }),
+      ...(currentFile?.url && { mediaUrl: currentFile.url }),
+      ...(currentFile?.name && { fileName: currentFile.name }),
+      ...(currentFile && { type: 'file' })
     }];
 
     if (currentFile) {
@@ -801,7 +831,11 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
         aiResponse = await getChatResponse(userMsg, base64Data, mimeType || undefined);
       }
 
-      const finalMessages = [...newMessages, { role: 'ai', text: aiResponse, image: aiImage }];
+      const finalMessages = [...newMessages, { 
+        role: 'ai', 
+        text: aiResponse,
+        ...(aiImage && { image: aiImage })
+      }];
       if (!aiImage && aiResponse) {
         // Auto-save responses to library if they look long/valuable
         if (aiResponse.length > 50) {
@@ -923,69 +957,71 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
 
   return (
     <div className={`mx-auto h-full flex flex-col transition-all duration-500 ${isFullScreen ? 'fixed inset-0 z-[100] bg-white max-w-none m-0' : 'max-w-6xl -mt-4 sm:mt-0'}`}>
-      <div className={`hidden sm:flex flex-col gap-2 mb-4 px-4 lg:px-0 ${isFullScreen ? 'p-6 border-b' : ''}`}>
+      <div className={`hidden sm:flex flex-col gap-2 mb-4 px-4 lg:px-0 ${isFullScreen ? 'p-6 border-b border-gold/10' : ''}`}>
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
-            <Sparkles className="w-8 h-8 text-blue-600" />
+          <h2 className="text-3xl font-black italic tracking-tighter text-gray-900 flex items-center gap-3 uppercase">
+            <div className="w-12 h-12 rounded-full bg-gold flex items-center justify-center shadow-[0_5px_0_#b8860b] text-white">
+              <Sparkles className="w-7 h-7" />
+            </div>
             Svark AI
           </h2>
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={() => setIsFullScreen(!isFullScreen)}
-            className="rounded-xl hover:bg-gray-100"
+            className="rounded-2xl w-12 h-12 hover:bg-gold/5 text-gold transition-all active:scale-95"
           >
             {isFullScreen ? <X className="w-6 h-6" /> : <Maximize2 className="w-6 h-6" />}
           </Button>
         </div>
-        {!isFullScreen && <p className="text-gray-500">AI yordamida dizaynlar yarating va ularni uyingizda sinab ko'ring.</p>}
+        {!isFullScreen && <p className="text-gold/60 font-medium uppercase tracking-widest text-[10px]">AI yordamida premium dizaynlar yarating.</p>}
       </div>
 
       <Tabs defaultValue="chat" className="w-full flex-1 flex flex-col">
         <div className="px-0 sm:px-4 lg:px-0">
-          <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-none sm:rounded-2xl mb-0 sm:mb-6">
-            <TabsTrigger value="chat" className="rounded-none sm:rounded-xl py-4 sm:py-3 gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm">
-              <MessageSquare className="w-4 h-4" />
+          <TabsList className="grid w-full grid-cols-2 bg-gray-50 p-1.5 rounded-none sm:rounded-[2rem] mb-0 sm:mb-8 border border-gold/10 shadow-sm">
+            <TabsTrigger value="chat" className="rounded-none sm:rounded-[1.5rem] py-4 sm:py-5 gap-3 data-[state=active]:bg-gold data-[state=active]:shadow-lg data-[state=active]:text-white font-black text-xs sm:text-sm uppercase tracking-widest transition-all text-gray-400">
+              <MessageSquare className="w-5 h-5" />
               AI Chat
             </TabsTrigger>
-            <TabsTrigger value="camera" className="rounded-none sm:rounded-xl py-4 sm:py-3 gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm">
-              <Camera className="w-4 h-4" />
-              Kamera
+            <TabsTrigger value="camera" className="rounded-none sm:rounded-[1.5rem] py-4 sm:py-5 gap-3 data-[state=active]:bg-gold data-[state=active]:shadow-lg data-[state=active]:text-white font-black text-xs sm:text-sm uppercase tracking-widest transition-all text-gray-400">
+              <Camera className="w-5 h-5" />
+              Virtual Sinov
             </TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="chat" className={`mt-0 relative flex-1 flex flex-col min-h-0 ${isFullScreen ? 'h-full' : 'h-[calc(100vh-280px)] sm:h-[calc(100vh-320px)]'}`}>
           <Card className={`flex-1 flex flex-col border-none ${isFullScreen ? 'rounded-none shadow-none w-full h-full' : 'shadow-none sm:shadow-2xl rounded-none sm:rounded-3xl'} overflow-hidden bg-white relative`}>
-            <CardHeader className="border-b bg-white/50 backdrop-blur-xl sticky top-0 z-20 flex flex-row items-center justify-between py-4 px-6 rounded-t-3xl h-20 shrink-0">
+            <CardHeader className="border-b bg-white backdrop-blur-xl sticky top-0 z-20 flex flex-row items-center justify-between py-4 px-6 rounded-t-3xl h-20 shrink-0 border-gold/10">
               <div className="flex items-center gap-3">
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                  className="rounded-2xl hover:bg-white/80 transition-colors"
+                  className="rounded-2xl hover:bg-gold/5 transition-colors text-gold"
                 >
-                  <Menu className="w-5 h-5 text-gray-900" />
+                  <Menu className="w-5 h-5" />
                 </Button>
                 <div>
                   <CardTitle className="text-xl font-black flex items-center gap-2 text-gray-900">
-                    <Sparkles className="w-6 h-6 text-blue-600 animate-pulse" />
+                    <Sparkles className="w-6 h-6 text-gold animate-pulse" />
                     Svark AI
                   </CardTitle>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Digital Assistant</p>
+                  <p className="text-[10px] text-gold/60 font-bold uppercase tracking-widest leading-none">Premium Assistant</p>
                 </div>
               </div>
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={startNewChat}
-                className="rounded-2xl border-blue-100 text-blue-600 hover:bg-blue-50 gap-2 h-10 px-4 font-bold"
+                className="rounded-2xl border-gold/20 text-gold hover:bg-gold/5 gap-2 h-10 px-4 font-bold shadow-sm"
               >
                 <Plus className="w-4 h-4" />
                 Yangi chat
               </Button>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0 flex flex-col relative bg-gray-50/30">
+            <CardContent className="flex-1 overflow-hidden p-0 flex flex-col relative bg-white">
               {/* History Sidebar */}
               <AnimatePresence>
                 {isHistoryOpen && (
@@ -993,28 +1029,28 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                     initial={{ x: -400 }}
                     animate={{ x: 0 }}
                     exit={{ x: -400 }}
-                    className="absolute inset-y-0 left-0 w-72 sm:w-80 bg-white border-r z-40 shadow-2xl flex flex-col"
+                    className="absolute inset-y-0 left-0 w-72 sm:w-80 bg-white border-r border-gold/10 z-40 shadow-2xl flex flex-col"
                   >
-                    <div className="p-4 border-b flex items-center justify-between bg-white">
-                      <h4 className="font-bold flex items-center gap-2">
-                        <History className="w-4 h-4 text-blue-600" /> Tarix
+                    <div className="p-4 border-b border-gold/10 flex items-center justify-between bg-white">
+                      <h4 className="font-bold flex items-center gap-2 text-gray-900">
+                        <History className="w-4 h-4 text-gold" /> Tarix
                       </h4>
-                      <Button variant="ghost" size="icon" onClick={() => setIsHistoryOpen(false)}>
+                      <Button variant="ghost" size="icon" onClick={() => setIsHistoryOpen(false)} className="text-gold">
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
-                    <ScrollArea className="flex-1 p-2">
+                    <ScrollArea className="flex-1 p-2 bg-gray-50/50">
                       <div className="space-y-1">
                         {chatHistory.map((session) => (
                           <div key={session.id} className="group relative">
                             <button
                               onClick={() => loadChatSession(session)}
                               className={`w-full text-left p-3 rounded-xl text-sm transition-all pr-10 ${
-                                currentSessionId === session.id ? 'bg-blue-600 text-white' : 'hover:bg-white'
+                                currentSessionId === session.id ? 'bg-gold text-white shadow-md' : 'hover:bg-gold/5 text-gray-700'
                               }`}
                             >
                               <p className="font-medium truncate">{session.title}</p>
-                              <p className={`text-[10px] ${currentSessionId === session.id ? 'text-blue-100' : 'text-gray-400'}`}>
+                              <p className={`text-[10px] ${currentSessionId === session.id ? 'text-white/80' : 'text-gold/40'}`}>
                                 {session.updatedAt?.toDate().toLocaleDateString()}
                               </p>
                             </button>
@@ -1023,7 +1059,7 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                                 e.stopPropagation();
                                 deleteChatSession(session.id);
                               }}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity ${currentSessionId === session.id ? 'text-white/60 hover:text-white' : 'text-gold/40 hover:text-red-500'}`}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1036,24 +1072,30 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
               </AnimatePresence>
 
               <div className="flex-1 relative min-h-0 flex flex-col">
-                <ScrollArea className="flex-1" ref={chatEndRef}>
+                <ScrollArea className="flex-1">
                   <div className="p-4 sm:p-6 space-y-4">
+                    <div ref={chatTopRef} />
                     {messages.map((msg, i) => (
-                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] p-4 rounded-2xl ${
+                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-3`}>
+                        {msg.role === 'ai' && (
+                          <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center shrink-0 shadow-lg mt-1">
+                            <Sparkles className="w-5 h-5 text-gold" />
+                          </div>
+                        )}
+                        <div className={`max-w-[80%] p-5 rounded-[1.5rem] ${
                           msg.role === 'user' 
-                            ? 'bg-blue-600 text-white rounded-tr-none' 
-                            : 'bg-gray-100 text-gray-900 rounded-tl-none'
+                            ? 'bg-gold text-white rounded-tr-none shadow-xl shadow-gold/10' 
+                            : 'bg-white text-gray-900 rounded-tl-none border border-gold/5 shadow-xl shadow-gold/5'
                         }`}>
                           {msg.image && (
-                            <div className="mb-3 rounded-xl overflow-hidden shadow-lg border-2 border-white/20">
+                            <div className="mb-4 rounded-2xl overflow-hidden shadow-2xl border border-gold/10">
                               <img src={msg.image} alt="AI Content" className="w-full h-auto" referrerPolicy="no-referrer" />
                             </div>
                           )}
                           {msg.mediaUrl && (
-                            <div className="mb-3 rounded-xl overflow-hidden shadow-lg border-2 border-white/20 bg-black">
+                            <div className="mb-4 rounded-2xl overflow-hidden shadow-2xl border border-gold/10 bg-black">
                               {msg.mediaType === 'image' && <img src={msg.mediaUrl} alt="Media" className="w-full h-auto" referrerPolicy="no-referrer" />}
-                              {msg.mediaType === 'voice' && <audio src={msg.mediaUrl} controls className="w-full h-10" />}
+                              {msg.mediaType === 'voice' && <audio src={msg.mediaUrl} controls className="w-full h-10 brightness-90 contrast-125" />}
                               {msg.mediaType === 'video' && (
                                 <VideoMessage src={msg.mediaUrl!} />
                               )}
@@ -1063,43 +1105,67 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                                 </div>
                               )}
                               {msg.type === 'file' && (
-                                <div className="flex items-center gap-3 p-3 bg-white/10 rounded-xl border border-white/20">
-                                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                                    <FileText className="w-6 h-6 text-white" />
+                                <div className="flex items-center gap-4 p-4 bg-black rounded-2xl border border-gold/20">
+                                  <div className="w-12 h-12 bg-gold/10 rounded-xl flex items-center justify-center">
+                                    <FileText className="w-7 h-7 text-gold" />
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold truncate text-white">{msg.fileName || 'Fayl'}</p>
-                                    <p className="text-[10px] text-white/60">Hujjat</p>
+                                    <p className="text-xs font-black truncate text-white uppercase tracking-widest italic">{msg.fileName || 'Fayl'}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Svark AI Hujjati</p>
                                   </div>
-                                  <a href={msg.mediaUrl} download={msg.fileName} className="p-2 hover:bg-white/20 rounded-full transition-colors text-white">
-                                    <Download className="w-4 h-4" />
+                                  <a href={msg.mediaUrl} download={msg.fileName} className="p-2.5 bg-white/5 hover:bg-gold hover:text-black rounded-xl transition-all text-white">
+                                    <Download className="w-5 h-5" />
                                   </a>
                                 </div>
                               )}
                             </div>
                           )}
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                          <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap italic">{msg.text}</p>
                         </div>
+                        {msg.role === 'user' && (
+                          <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shrink-0 border border-gold/10 mt-1">
+                            <User className="w-5 h-5 text-gold/40" />
+                          </div>
+                        )}
                       </div>
                     ))}
                     {chatLoading && (
-                      <div className="flex justify-start">
-                        <div className="bg-gray-100 p-4 rounded-2xl rounded-tl-none">
-                          <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+                      <div className="flex justify-start gap-3">
+                        <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center shrink-0 shadow-lg">
+                          <RefreshCw className="w-5 h-5 text-gold animate-spin" />
+                        </div>
+                        <div className="bg-white p-5 rounded-[1.5rem] rounded-tl-none border border-gold/5 shadow-xl shadow-gold/5">
+                          <div className="flex gap-1.5">
+                            <div className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce" />
+                            <div className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce [animation-delay:0.2s]" />
+                            <div className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce [animation-delay:0.4s]" />
+                          </div>
                         </div>
                       </div>
                     )}
-                    <div ref={chatEndRef} />
+                    <div ref={chatBottomRef} />
                   </div>
                 </ScrollArea>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="absolute bottom-4 right-4 rounded-full shadow-lg opacity-80 hover:opacity-100"
-                  onClick={() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                >
-                  <RefreshCw className="w-4 h-4 rotate-180" />
-                </Button>
+                <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="rounded-full shadow-lg opacity-80 hover:opacity-100 bg-white border border-gold/10 hover:border-gold/30 transition-all"
+                    onClick={() => chatTopRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                    title="Tepaga"
+                  >
+                    <ArrowUp className="w-4 h-4 text-gold" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="rounded-full shadow-lg opacity-80 hover:opacity-100 bg-white border border-gold/10 hover:border-gold/30 transition-all"
+                    onClick={() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                    title="Pastga"
+                  >
+                    <ArrowDown className="w-4 h-4 text-gold" />
+                  </Button>
+                </div>
               </div>
               
               <div className="p-4 border-t bg-gray-50 space-y-4 relative">
@@ -1132,37 +1198,46 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                   )}
                 </AnimatePresence>
 
-                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                  <Button 
+                <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar py-2 px-1">
+                  <motion.button 
+                    whileHover={{ scale: 1.05, translateY: -2 }}
+                    whileTap={{ scale: 0.95, translateY: 0 }}
                     type="button"
-                    variant="outline" 
-                    size="sm" 
                     onClick={() => setInput("Zamonaviy darvoza dizaynini yaratib ber")}
-                    className="rounded-full whitespace-nowrap bg-white border-blue-100 text-blue-600 text-xs"
+                    className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest shadow-xl shadow-gold/5 active:translate-y-[4px] transition-all"
                   >
-                    🎨 Rasm yaratish
-                  </Button>
-                  <Button 
+                    <div className="w-8 h-8 rounded-xl bg-gold/10 flex items-center justify-center shadow-inner">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    Rasm yaratish
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.05, translateY: -2 }}
+                    whileTap={{ scale: 0.95, translateY: 0 }}
                     type="button"
-                    variant="outline" 
-                    size="sm" 
                     onClick={() => setInput("Ushbu dizayn haqida tushuntirish ber")}
-                    className="rounded-full whitespace-nowrap bg-white border-purple-100 text-purple-600 text-xs"
+                    className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest shadow-xl shadow-gold/5 active:translate-y-[4px] transition-all"
                   >
-                    ✨ AI Tahlil
-                  </Button>
-                  <Button 
+                    <div className="w-8 h-8 rounded-xl bg-gold/10 flex items-center justify-center shadow-inner">
+                      <Wand2 className="w-5 h-5" />
+                    </div>
+                    AI Tahlil
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.05, translateY: -2 }}
+                    whileTap={{ scale: 0.95, translateY: 0 }}
                     type="button"
-                    variant="outline" 
-                    size="sm" 
                     onClick={() => setInput("Narxlarni hisoblab ber")}
-                    className="rounded-full whitespace-nowrap bg-white border-green-100 text-green-600 text-xs"
+                    className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest shadow-xl shadow-gold/5 active:translate-y-[4px] transition-all"
                   >
-                    💰 Narxni hisoblash
-                  </Button>
+                    <div className="w-8 h-8 rounded-xl bg-gold/10 flex items-center justify-center shadow-inner">
+                      <Calculator className="w-5 h-5" />
+                    </div>
+                    Narxni hisoblash
+                  </motion.button>
                 </div>
                 {attachedImage && (
-                  <div className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-blue-400">
+                  <div className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-gold/40">
                     <img src={attachedImage} className="w-full h-full object-cover" />
                     <button 
                       onClick={() => setAttachedImage(null)}
@@ -1173,13 +1248,13 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                   </div>
                 )}
                 {attachedFile && (
-                  <div className="relative w-full max-w-[200px] p-3 rounded-xl bg-blue-50 border border-blue-100 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-blue-600" />
+                  <div className="relative w-full max-w-[200px] p-3 rounded-xl bg-gold/5 border border-gold/10 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gold/10 rounded-lg flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-gold" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold truncate text-blue-900">{attachedFile.name}</p>
-                      <p className="text-[10px] text-blue-500">Yuklangan fayl</p>
+                      <p className="text-xs font-black truncate text-gray-900 italic uppercase tracking-tighter">{attachedFile.name}</p>
+                      <p className="text-[10px] text-gold/40 font-bold uppercase tracking-widest">Yuklangan fayl</p>
                     </div>
                     <button 
                       onClick={() => setAttachedFile(null)}
@@ -1189,14 +1264,14 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                     </button>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1">
+                <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-3xl border border-gray-100">
+                  <div className="flex gap-1 pl-1">
                     <Button 
                       type="button" 
                       variant="ghost" 
                       size="icon"
                       onClick={() => chatFileInputRef.current?.click()}
-                      className="rounded-full hover:bg-blue-50 hover:text-blue-600"
+                      className="rounded-xl w-10 h-10 hover:bg-white hover:shadow-sm text-black transition-all"
                       title="Fayl yuklash (PDF, CAD)"
                     >
                       <Paperclip className="w-5 h-5" />
@@ -1206,28 +1281,10 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                       variant="ghost" 
                       size="icon"
                       onClick={() => chatImageInputRef.current?.click()}
-                      className="rounded-full hover:bg-blue-50 hover:text-blue-600"
+                      className="rounded-xl w-10 h-10 hover:bg-white hover:shadow-sm text-black transition-all"
                       title="Rasm yuklash"
                     >
                       <ImageIcon className="w-5 h-5" />
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => startRecording('video')}
-                      className={`rounded-full hover:bg-blue-50 hover:text-blue-600 ${isRecording && recordingType === 'video' ? 'text-red-500 bg-red-50' : ''}`}
-                    >
-                      <Video className="w-5 h-5" />
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => startRecording('round_video')}
-                      className={`rounded-full hover:bg-blue-50 hover:text-blue-600 ${isRecording && recordingType === 'round_video' ? 'text-red-500 bg-red-50' : ''}`}
-                    >
-                      <CirclePlay className="w-5 h-5" />
                     </Button>
                   </div>
                   <input 
@@ -1244,21 +1301,40 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                     accept=".pdf,.dwg,.dxf,.zip"
                     onChange={handleChatFileUpload} 
                   />
-                  <Input 
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage(new Event('submit') as any);
-                      }
-                    }}
-                    placeholder="Xabaringizni yozing..."
-                    className="flex-1 rounded-2xl py-6 bg-white border-none focus-visible:ring-blue-600"
-                  />
-                  <Button type="submit" disabled={chatLoading || (!input.trim() && !attachedImage && !attachedFile)} className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl w-12 h-12 p-0 flex items-center justify-center shadow-lg shadow-blue-100">
-                    <Send className="w-5 h-5" />
-                  </Button>
+                  <div className="flex-1 relative group">
+                    <Input 
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage(new Event('submit') as any);
+                        }
+                      }}
+                      placeholder="AI ga savol bering..."
+                      className="w-full rounded-[1.5rem] py-8 bg-white border-gold/10 focus-visible:ring-gold/20 shadow-xl shadow-gold/5 px-6 font-medium italic"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                       <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => startRecording('video')}
+                        className={`w-10 h-10 rounded-xl hover:bg-gold/10 hover:text-gold transition-all ${isRecording && recordingType === 'video' ? 'text-red-500 bg-red-50' : 'text-gray-400'}`}
+                      >
+                        <Video className="w-5 h-5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    disabled={chatLoading || (!input.trim() && !attachedImage && !attachedFile)} 
+                    type="submit"
+                    className="bg-gold hover:bg-gold-light disabled:opacity-50 disabled:grayscale text-white rounded-[1.2rem] w-14 h-14 flex items-center justify-center shadow-xl shadow-gold/30 active:scale-95 transition-all"
+                  >
+                    <Send className="w-6 h-6 fill-current" />
+                  </motion.button>
                 </div>
               </div>
             </CardContent>
@@ -1266,69 +1342,237 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
         </TabsContent>
 
         <TabsContent value="camera" className="mt-0 relative flex-1 flex flex-col min-h-0 h-full">
-          <Card className="flex-1 border-none shadow-none sm:shadow-2xl rounded-none sm:rounded-3xl overflow-hidden bg-black relative min-h-[calc(100vh-180px)] sm:min-h-[500px]">
-            {!stream && !backgroundImage ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-8 space-y-6 text-center">
-                <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md">
-                  <Camera className="w-10 h-10 text-blue-400" />
+          <Card className={`flex-1 border-none ${isFullScreen ? 'rounded-none shadow-none' : 'shadow-none sm:shadow-2xl rounded-none sm:rounded-3xl'} overflow-hidden bg-white relative min-h-[calc(100vh-180px)] sm:min-h-[600px] flex flex-col`}>
+            {!tryOnProduct && tryOnStep === 'product' ? (
+              <div className="flex-1 flex flex-col p-6 space-y-6">
+                <div className="text-center space-y-2">
+                  <h3 className="text-2xl font-black italic uppercase tracking-tight text-gray-900 leading-none">1. Mahsulotni tanlang</h3>
+                  <p className="text-gold/60 text-sm font-medium">Sinab ko'rmoqchi bo'lgan darvoza yoki dizayningizni yuklang.</p>
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold">Kamera</h3>
-                  <p className="text-gray-400 max-w-xs">O'rnatish joyini kameraga oling.</p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="cursor-pointer group">
+                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = async () => {
+                          const base64 = reader.result as string;
+                          setIsRemovingBg(true);
+                          try {
+                            const processed = await removeBackgroundUtil(base64);
+                            setTryOnProduct(processed);
+                            setTryOnStep('background');
+                            toast.success("Mahsulot tayyor!");
+                          } catch (err) {
+                            setTryOnProduct(base64);
+                            setTryOnStep('background');
+                          } finally {
+                            setIsRemovingBg(false);
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }} />
+                    <div className="h-44 rounded-[2.5rem] border-4 border-dashed border-gold/10 group-hover:border-gold/30 group-hover:bg-gold/5 transition-all flex flex-col items-center justify-center gap-3 bg-gray-50/50">
+                      <div className="w-14 h-14 rounded-full bg-gold flex items-center justify-center text-white shadow-lg">
+                        <Upload className="w-7 h-7" />
+                      </div>
+                      <span className="font-black text-[10px] uppercase tracking-[0.2em] text-gold/60">Rasm yuklash</span>
+                    </div>
+                  </label>
+                  
+                  <div className="h-44 rounded-[2.5rem] border-4 border-gold/5 bg-gray-50 flex flex-col items-center justify-center gap-3 opacity-50 grayscale">
+                    <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center text-gold/20 shadow-sm border border-gold/10">
+                      <History className="w-7 h-7" />
+                    </div>
+                    <span className="font-black text-[10px] uppercase tracking-[0.2em] text-gold/20">Arxivdan tanlash</span>
+                  </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
+
+                <div className="flex-1 overflow-hidden">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-[1px] flex-1 bg-gold/10" />
+                    <p className="text-[10px] font-black text-gold/40 uppercase tracking-[0.2em]">Mavjud namunalar</p>
+                    <div className="h-[1px] flex-1 bg-gold/10" />
+                  </div>
+                  <ScrollArea className="h-full">
+                    <div className="grid grid-cols-3 gap-3 pb-20">
+                      {products.slice(0, 9).map((p) => (
+                        <button 
+                          key={p.id}
+                          onClick={async () => {
+                            setIsRemovingBg(true);
+                            try {
+                              const processed = await removeBackgroundUtil(p.imageUrl);
+                              setTryOnProduct(processed);
+                              setTryOnStep('background');
+                            } catch {
+                              setTryOnProduct(p.imageUrl);
+                              setTryOnStep('background');
+                            } finally {
+                              setIsRemovingBg(false);
+                            }
+                          }}
+                          className="aspect-square rounded-[1.5rem] overflow-hidden border-2 border-transparent hover:border-gold transition-all relative group bg-gray-50 shadow-sm hover:shadow-md"
+                        >
+                          <img src={p.imageUrl} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-gold/0 group-hover:bg-gold/20 transition-all flex items-center justify-center">
+                            <Plus className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 scale-50 group-hover:scale-100 transition-all" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </div>
+            ) : tryOnStep === 'background' ? (
+              <div className="flex-1 flex flex-col p-6 space-y-8 items-center justify-center bg-gray-50/50">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setTryOnStep('product')} 
+                  className="absolute top-6 left-6 rounded-2xl text-gold hover:bg-gold/5 font-bold"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" /> Ortga
+                </Button>
+                <div className="text-center space-y-3">
+                  <h3 className="text-3xl font-black italic uppercase tracking-tighter text-gray-900 leading-none">2. Joyni tanlang</h3>
+                  <p className="text-gold/60 text-sm font-medium">Mahsulotni qayerda ko'rmoqchisiz?</p>
+                </div>
+
+                <div className="flex flex-col gap-5 w-full max-w-sm">
                   <Button 
-                    onClick={startCamera} 
-                    disabled={loading}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-2xl py-6 text-lg font-bold shadow-xl shadow-blue-500/20"
+                    onClick={() => {
+                      startCamera();
+                      setTryOnStep('interactive');
+                    }}
+                    className="h-24 rounded-[2rem] bg-gold hover:bg-gold-light shadow-xl shadow-gold/20 flex items-center justify-start px-8 gap-6 group transition-all"
                   >
-                    {loading ? <RefreshCw className="w-5 h-5 animate-spin mr-2" /> : <Camera className="w-5 h-5 mr-2" />}
-                    Kamerani ochish
+                    <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform"><Camera className="w-7 h-7 text-white" /></div>
+                    <div className="text-left">
+                      <p className="font-black italic uppercase text-lg text-white leading-tight">Jonli Kamera</p>
+                      <p className="text-[10px] text-white/70 font-bold uppercase tracking-wider">Haqiqiy vaqtda sinash</p>
+                    </div>
                   </Button>
+
+                  <label className="cursor-pointer">
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setBackgroundImage(reader.result as string);
+                          setTryOnStep('interactive');
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }} />
+                    <div className="h-24 rounded-[2rem] bg-white border border-gold/10 hover:border-gold/30 hover:bg-gold/5 transition-all flex items-center justify-start px-8 gap-6 group shadow-sm hover:shadow-md">
+                      <div className="w-14 h-14 rounded-2xl bg-gold/5 flex items-center justify-center text-gold group-hover:scale-110 transition-transform"><ImageIcon className="w-7 h-7" /></div>
+                      <div className="text-left">
+                        <p className="font-black italic uppercase text-lg text-gray-900 leading-tight">Rasm yuklash</p>
+                        <p className="text-[10px] text-gold/40 font-bold uppercase tracking-wider">Galereyadan tanlash</p>
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </div>
             ) : (
               <div 
                 ref={containerRef}
-                className="relative w-full h-full overflow-hidden"
+                className="relative flex-1 w-full bg-white overflow-hidden touch-none"
+                onMouseMove={(e) => isDragging && handleMove(e.clientX, e.clientY)}
+                onTouchMove={(e) => isDragging && handleMove(e.touches[0].clientX, e.touches[0].clientY)}
+                onMouseUp={() => setIsDragging(false)}
+                onTouchEnd={() => setIsDragging(false)}
               >
                 {stream ? (
-                  <video 
-                    ref={videoRef} 
-                    autoPlay 
-                    playsInline 
-                    className="w-full h-full object-cover"
-                  />
+                  <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
                 ) : (
-                  <img 
-                    src={backgroundImage!} 
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
+                  <img src={backgroundImage!} className="w-full h-full object-cover shadow-inner" />
                 )}
-                
-                <div className="absolute top-6 left-6 flex gap-2 z-10">
-                  <Button 
-                    onClick={toggleCamera}
-                    className="rounded-full px-4 py-2 flex items-center gap-2 bg-white/20 text-white hover:bg-white/30 backdrop-blur-md border-none shadow-lg transition-all"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Oldi/Orqa Kamera
-                  </Button>
-                </div>
 
-                <div className="absolute bottom-6 left-6 right-6 flex justify-center">
-                  <Button 
-                    variant="secondary" 
-                    size="icon" 
-                    onClick={() => {
-                      stopCamera();
-                      setBackgroundImage(null);
+                {/* Overlay Product */}
+                {tryOnProduct && (
+                  <div 
+                    className="absolute cursor-move select-none touch-none"
+                    style={{
+                      left: `${tryOnPos.x}%`,
+                      top: `${tryOnPos.y}%`,
+                      transform: `translate(-50%, -50%) rotate(${tryOnRotation}deg) scale(${tryOnScale})`,
+                      opacity: opacity
                     }}
-                    className="rounded-full bg-white/20 backdrop-blur-md border-none text-white hover:bg-white/30 w-16 h-16"
+                    onMouseDown={() => setIsDragging(true)}
+                    onTouchStart={() => setIsDragging(true)}
                   >
-                    <X className="w-8 h-8" />
-                  </Button>
+                    <img src={tryOnProduct} className="max-w-[400px] h-auto pointer-events-none drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] filter contrast-125 saturate-125" />
+                    {isDragging && <div className="absolute inset-0 border-4 border-gold border-dashed rounded-[2rem] animate-pulse" />}
+                  </div>
+                )}
+
+                {/* Controls Overlay */}
+                <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-white via-white/80 to-transparent flex flex-col gap-6">
+                  {/* Tools */}
+                  <div className="flex justify-between items-center bg-white/90 backdrop-blur-2xl p-4 rounded-[2.5rem] border border-gold/10 shadow-2xl shadow-gold/10">
+                    <div className="flex gap-2">
+                       <Button size="icon" variant="ghost" onClick={() => setTryOnRotation(r => r - 15)} className="text-gold hover:bg-gold/10 rounded-2xl w-12 h-12 shadow-sm border border-gold/5">
+                        <RotateCcw className="w-5 h-5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => setTryOnRotation(r => r + 15)} className="text-gold hover:bg-gold/10 rounded-2xl w-12 h-12 shadow-sm border border-gold/5">
+                        <RotateCcw className="w-5 h-5 transform scale-x-[-1]" />
+                      </Button>
+                    </div>
+
+                    <div className="flex-1 px-8">
+                       <Slider 
+                        value={[tryOnScale * 100]} 
+                        min={10} 
+                        max={300} 
+                        step={1} 
+                        onValueChange={(v) => setTryOnScale(v[0] / 100)}
+                        className="w-full"
+                      />
+                      <p className="text-[8px] font-black text-gold/40 uppercase tracking-[0.2em] text-center mt-2">O'lchamni sozlash</p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        onClick={() => {
+                          setTryOnProduct(null);
+                          setTryOnStep('product');
+                          stopCamera();
+                          setBackgroundImage(null);
+                        }} 
+                        className="text-red-500 bg-red-50 hover:bg-red-100 rounded-2xl w-12 h-12 shadow-sm border border-red-100"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </Button>
+                      {stream && (
+                        <Button size="icon" variant="ghost" onClick={toggleCamera} className="text-gold bg-gold/5 hover:bg-gold/10 rounded-2xl w-12 h-12 shadow-sm border border-gold/10">
+                          <RefreshCw className="w-5 h-5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <Button 
+                      onClick={captureImage}
+                      className="flex-1 bg-white text-gold border-2 border-gold/10 hover:bg-gold/5 rounded-[1.5rem] h-16 font-black italic uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-gold/5"
+                    >
+                      <Download className="w-6 h-6 mr-2" /> Rasmga olish
+                    </Button>
+                    <Button 
+                      onClick={getAiRecommendation}
+                      disabled={isAiAnalyzing}
+                      className="flex-1 bg-gold text-white hover:bg-gold-light rounded-[1.5rem] h-16 font-black italic uppercase tracking-widest shadow-xl shadow-gold/20 active:scale-95 transition-all gap-2"
+                    >
+                      {isAiAnalyzing ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Sparkles className="w-6 h-6" />}
+                      AI Tavsiya
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1345,8 +1589,8 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
-                  <Label className="text-lg font-bold text-gray-700 flex items-center gap-2">
-                    <ImageIcon className="w-5 h-5 text-blue-600" /> Orqa fon (Uy, deraza, devor)
+                  <Label className="text-[10px] font-black text-gold uppercase tracking-[0.3em] flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-gold" /> Orqa fon (Uy, deraza, devor)
                   </Label>
                   <label className="block group">
                     <input 
@@ -1363,7 +1607,7 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                       }} 
                     />
                     <div className={`aspect-video rounded-3xl border-4 border-dashed transition-all flex flex-col items-center justify-center gap-4 cursor-pointer overflow-hidden relative ${
-                      designBackground ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50'
+                      designBackground ? 'border-gold bg-gold/5 shadow-inner' : 'border-gold/10 hover:border-gold/40 hover:bg-gold/5'
                     }`}>
                       {designBackground ? (
                         <>
@@ -1374,8 +1618,8 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                         </>
                       ) : (
                         <>
-                          <Upload className="w-12 h-12 text-gray-300 group-hover:text-blue-500 transition-colors" />
-                          <p className="text-sm font-medium text-gray-500">Fon rasmini yuklang</p>
+                          <Upload className="w-12 h-12 text-gold/20 group-hover:text-gold transition-colors" />
+                          <p className="text-[10px] font-black text-gold/40 uppercase tracking-widest italic">Fon rasmini yuklang</p>
                         </>
                       )}
                     </div>
@@ -1383,8 +1627,8 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                 </div>
 
                 <div className="space-y-4">
-                  <Label className="text-lg font-bold text-gray-700 flex items-center gap-2">
-                    <Box className="w-5 h-5 text-blue-600" /> Mahsulot (Darvoza, reshotka)
+                  <Label className="text-[10px] font-black text-gold uppercase tracking-[0.3em] flex items-center gap-2">
+                    <Box className="w-5 h-5 text-gold" /> Mahsulot (Darvoza, reshotka)
                   </Label>
                   <label className="block group">
                     <input 
@@ -1401,7 +1645,7 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                       }} 
                     />
                     <div className={`aspect-video rounded-3xl border-4 border-dashed transition-all flex flex-col items-center justify-center gap-4 cursor-pointer overflow-hidden relative ${
-                      designProduct ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50'
+                      designProduct ? 'border-gold bg-gold/5 shadow-inner' : 'border-gold/10 hover:border-gold/40 hover:bg-gold/5'
                     }`}>
                       {designProduct ? (
                         <>
@@ -1412,8 +1656,8 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
                         </>
                       ) : (
                         <>
-                          <Upload className="w-12 h-12 text-gray-300 group-hover:text-blue-500 transition-colors" />
-                          <p className="text-sm font-medium text-gray-500">Mahsulot rasmini yuklang</p>
+                          <Upload className="w-12 h-12 text-gold/20 group-hover:text-gold transition-colors" />
+                          <p className="text-[10px] font-black text-gold/40 uppercase tracking-widest italic">Mahsulot rasmini yuklang</p>
                         </>
                       )}
                     </div>
@@ -1422,27 +1666,27 @@ export const SvarkAI: React.FC<{ user: any }> = ({ user }) => {
               </div>
 
               <div className="space-y-4">
-                <Label className="text-lg font-bold text-gray-700 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-blue-600" /> Promt (AI ga nima yaratishni ayting)
+                <Label className="text-[10px] font-black text-gold uppercase tracking-[0.3em] flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-gold" /> Promt (AI ga nima yaratishni ayting)
                 </Label>
                 <div className="relative">
                   <Input 
                     value={designPrompt}
                     onChange={(e) => setDesignPrompt(e.target.value)}
                     placeholder="Masalan: Darvozani devorga mos tushadigan qilib, tilla rangli elementlar bilan joylashtir..."
-                    className="rounded-2xl py-8 pl-6 pr-16 bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-lg"
+                    className="rounded-[1.5rem] py-10 pl-6 pr-16 bg-gray-50 border-gold/10 focus:border-gold focus:ring-4 focus:ring-gold/10 transition-all text-lg font-medium italic"
                   />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-blue-50 rounded-xl">
-                    <Sparkles className="w-6 h-6 text-blue-600" />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-gold/5 rounded-xl">
+                    <Sparkles className="w-6 h-6 text-gold" />
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-center pt-4">
+              <div className="flex justify-center pt-8">
                 <Button 
                   onClick={handleGenerateDesign}
                   disabled={isGeneratingDesign || !designBackground || !designProduct}
-                  className="px-12 py-8 rounded-3xl bg-blue-600 hover:bg-blue-700 text-white shadow-2xl shadow-blue-200 gap-4 font-bold text-xl transition-all hover:scale-105 active:scale-95 w-full sm:w-auto"
+                  className="px-16 py-10 rounded-[2rem] bg-gold hover:bg-gold-light text-white shadow-2xl shadow-gold/20 gap-4 font-black italic uppercase tracking-widest text-xl transition-all hover:scale-105 active:scale-95 w-full sm:w-auto"
                 >
                   {isGeneratingDesign ? (
                     <RefreshCw className="w-8 h-8 animate-spin" />

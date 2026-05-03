@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,14 +37,16 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onComplete }) 
 
     setLoading(true);
     try {
-      await updateDoc(doc(db, 'users', user.uid), {
+      await setDoc(doc(db, 'users', user.uid), {
         firstName,
         lastName,
         phone,
         photoURL,
+        uid: user.uid,
+        role: user.role || 'customer',
         displayName: `${firstName} ${lastName}`,
         profileComplete: true
-      });
+      }, { merge: true });
       toast.success("Profilingiz muvaffaqiyatli saqlandi!");
       setTimeout(() => {
         onComplete();
@@ -59,75 +61,76 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onComplete }) 
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Card className="w-full max-w-md border-none shadow-2xl rounded-3xl overflow-hidden">
-        <CardHeader className="bg-blue-600 text-white p-8">
-          <CardTitle className="text-2xl font-bold">Profilni to'ldiring</CardTitle>
-          <CardDescription className="text-blue-100">
+    <div className="flex items-center justify-center min-h-[60vh] px-4">
+      <Card className="w-full max-w-md border border-gold/5 shadow-2xl rounded-[3rem] overflow-hidden bg-white">
+        <CardHeader className="bg-gold text-white p-10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16" />
+          <CardTitle className="text-3xl font-black italic uppercase tracking-tighter relative z-10">Profilni to'ldiring</CardTitle>
+          <CardDescription className="text-white/80 font-medium italic mt-2 relative z-10">
             Ilovadan to'liq foydalanish uchun ma'lumotlaringizni kiriting.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="flex flex-col items-center gap-4 mb-6">
+        <CardContent className="p-10">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="flex flex-col items-center gap-4 mb-2">
               <div className="relative group">
-                <div className="w-24 h-24 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center">
+                <div className="w-28 h-28 rounded-[2rem] bg-gray-50 border-2 border-dashed border-gold/20 overflow-hidden flex items-center justify-center group-hover:border-gold/40 transition-colors">
                   {photoURL ? (
                     <img src={photoURL} alt="Preview" className="w-full h-full object-cover" />
                   ) : (
-                    <User className="w-8 h-8 text-gray-300" />
+                    <User className="w-10 h-10 text-gold/20" />
                   )}
                 </div>
-                <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-600 text-white rounded-lg shadow-lg flex items-center justify-center cursor-pointer hover:scale-110 transition-transform">
-                  <Camera className="w-4 h-4" />
+                <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-gold text-white rounded-xl shadow-xl flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-transform border-4 border-white">
+                  <Camera className="w-5 h-5" />
                   <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                 </label>
               </div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Profil rasmi</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] italic">Profil rasmi</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName">Ism</Label>
+                <Label htmlFor="firstName" className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 italic">Ism</Label>
                 <Input
                   id="firstName"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Ism"
+                  placeholder="Hasan"
                   required
-                  className="rounded-xl"
+                  className="rounded-2xl bg-gray-50 border-none h-14 px-5 focus-visible:ring-gold/20"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Familiya</Label>
+                <Label htmlFor="lastName" className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 italic">Familiya</Label>
                 <Input
                   id="lastName"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Familiya"
+                  placeholder="Aliyev"
                   required
-                  className="rounded-xl"
+                  className="rounded-2xl bg-gray-50 border-none h-14 px-5 focus-visible:ring-gold/20"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Telefon raqam</Label>
+              <Label htmlFor="phone" className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 italic">Telefon raqam</Label>
               <div className="relative">
-                <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gold/40" />
                 <Input
                   id="phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+998 90 123 45 67"
+                  placeholder="+998"
                   required
-                  className="pl-10 rounded-xl"
+                  className="pl-12 rounded-2xl bg-gray-50 border-none h-14 focus-visible:ring-gold/20"
                 />
               </div>
             </div>
             <Button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-xl text-lg font-bold gap-2"
+              className="w-full bg-gold hover:bg-gold-light text-white h-16 rounded-[1.5rem] text-sm font-black uppercase tracking-widest gap-3 shadow-xl shadow-gold/20 active:scale-95 transition-all"
             >
               {loading ? 'Saqlanmoqda...' : (
                 <>

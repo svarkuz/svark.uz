@@ -53,7 +53,7 @@ export const CustomerManager: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-gray-900 flex items-center gap-3">
-            <Users className="w-10 h-10 text-blue-600" />
+            <Users className="w-10 h-10 text-gold" />
             MIJOZLAR RO'YXATI
           </h2>
           <p className="text-gray-500 font-medium">Barcha ro'yxatdan o'tgan foydalanuvchilar</p>
@@ -61,19 +61,19 @@ export const CustomerManager: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative group shadow-sm transition-shadow hover:shadow-md rounded-2xl overflow-hidden">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-gold transition-colors" />
             <Input 
               placeholder="Ism yoki telefon..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 pr-4 h-14 w-full sm:w-[300px] border-none bg-white rounded-2xl font-medium focus-visible:ring-2 focus-visible:ring-blue-600"
+              className="pl-12 pr-4 h-14 w-full sm:w-[300px] border-none bg-white rounded-2xl font-medium focus-visible:ring-2 focus-visible:ring-gold"
             />
           </div>
 
           <Select value={roleFilter} onValueChange={setRoleFilter}>
             <SelectTrigger className="h-14 w-full sm:w-[180px] border-none bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow font-medium px-4">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-blue-600" />
+                <Filter className="w-4 h-4 text-gold" />
                 <SelectValue placeholder="Rol boyicha" />
               </div>
             </SelectTrigger>
@@ -101,7 +101,7 @@ export const CustomerManager: React.FC = () => {
               <Card className="rounded-3xl border-none shadow-xl overflow-hidden group hover:shadow-2xl transition-all h-full bg-white relative">
                 <div className={`h-2 w-full ${
                   user.role === 'admin' ? 'bg-red-500' : 
-                  user.role === 'master' || user.role === 'worker' ? 'bg-blue-600' : 
+                  user.role === 'master' || user.role === 'worker' ? 'bg-gold' : 
                   'bg-green-500'
                 }`} />
                 <CardHeader className="p-6">
@@ -109,12 +109,12 @@ export const CustomerManager: React.FC = () => {
                     <div className="flex items-center gap-4">
                       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:rotate-6 transition-transform ${
                         user.role === 'admin' ? 'bg-red-50' : 
-                        user.role === 'master' || user.role === 'worker' ? 'bg-blue-50' : 
+                        user.role === 'master' || user.role === 'worker' ? 'bg-gold/5' : 
                         'bg-green-50'
                       }`}>
                         <User className={`w-7 h-7 ${
                           user.role === 'admin' ? 'text-red-600' : 
-                          user.role === 'master' || user.role === 'worker' ? 'text-blue-600' : 
+                          user.role === 'master' || user.role === 'worker' ? 'text-gold' : 
                           'text-green-600'
                         }`} />
                       </div>
@@ -126,7 +126,7 @@ export const CustomerManager: React.FC = () => {
                         </CardTitle>
                         <Badge variant="secondary" className={`rounded-full px-3 py-1 font-bold text-[10px] uppercase mt-2 border-none ${
                           user.role === 'admin' ? 'bg-red-100 text-red-700' : 
-                          user.role === 'master' || user.role === 'worker' ? 'bg-blue-100 text-blue-700' : 
+                          user.role === 'master' || user.role === 'worker' ? 'bg-gold/10 text-gold-dark' : 
                           'bg-green-100 text-green-700'
                         }`}>
                           {user.role}
@@ -159,7 +159,7 @@ export const CustomerManager: React.FC = () => {
                        Ro'yxat: {user.createdAt?.seconds ? new Date(user.createdAt.seconds * 1000).toLocaleDateString() : 'Yaqinda'}
                     </p>
                     {user.profileComplete && (
-                      <Badge className="bg-blue-600 text-white border-none rounded-lg px-2 text-[8px] font-black">ACTIVE</Badge>
+                      <Badge className="bg-gold text-white border-none rounded-lg px-2 text-[8px] font-black">ACTIVE</Badge>
                     )}
                   </div>
                 </CardContent>

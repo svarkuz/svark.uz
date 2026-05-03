@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Package, Users, Settings, Shield, Camera, Trash2, Globe, Instagram, Send as TelegramIcon, MapPin, ImageIcon as ImageIconLucide, MessageSquare, Briefcase, CheckCircle2 } from 'lucide-react';
+import { CustomerManager } from './CustomerManager';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 
@@ -172,22 +173,25 @@ export const AdminDashboard: React.FC<{
   return (
     <div className="space-y-8">
       <Tabs defaultValue="orders" className="w-full">
-        <TabsList className="bg-gray-100 p-1 rounded-2xl mb-6 flex flex-wrap gap-2 h-auto sm:h-12 overflow-x-auto">
-          <TabsTrigger value="orders" className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm font-bold">
+        <TabsList className="bg-gray-100/50 p-1 rounded-2xl mb-6 flex flex-wrap gap-2 h-auto sm:h-12 overflow-x-auto border border-gold/5">
+          <TabsTrigger value="orders" className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:text-gold text-xs sm:text-sm font-bold transition-all">
             1. Ish jarayoni
           </TabsTrigger>
           {userProfile?.role === 'admin' && (
             <>
-              <TabsTrigger value="gallery" className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm font-bold">
+              <TabsTrigger value="gallery" className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:text-gold text-xs sm:text-sm font-bold transition-all">
                 2. Galereya
               </TabsTrigger>
-              <TabsTrigger value="config" className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm font-bold">
-                3. Sozlamalar
+              <TabsTrigger value="users" className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:text-gold text-xs sm:text-sm font-bold transition-all">
+                3. Foydalanuvchilar
+              </TabsTrigger>
+              <TabsTrigger value="config" className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:text-gold text-xs sm:text-sm font-bold transition-all">
+                4. Sozlamalar
               </TabsTrigger>
             </>
           )}
-          <TabsTrigger value="chat" className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm font-bold">
-            {userProfile?.role === 'admin' ? '4. Chat' : '2. Chat'}
+          <TabsTrigger value="chat" className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:text-gold text-xs sm:text-sm font-bold transition-all">
+            {userProfile?.role === 'admin' ? '5. Chat' : '2. Chat'}
           </TabsTrigger>
         </TabsList>
 
@@ -210,20 +214,20 @@ export const AdminDashboard: React.FC<{
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <h3 className="font-bold text-lg">{order.productName}</h3>
-                        <Badge className={
-                          order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          order.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                        <Badge className={`${
+                          order.status === 'pending' ? 'bg-amber-50 text-amber-600' :
+                          order.status === 'processing' ? 'bg-gold/10 text-gold font-bold' :
                           'bg-green-100 text-green-700'
-                        }>
-                          {order.status === 'pending' ? 'Kutilmoqda' :
-                           order.status === 'processing' ? 'Jarayonda' : 'Tayyor'}
-                        </Badge>
+                        } border-none rounded-lg px-2 text-[10px] uppercase font-black`}>
+                        {order.status === 'pending' ? 'Kutilmoqda' :
+                         order.status === 'processing' ? 'Jarayonda' : 'Tayyor'}
+                      </Badge>
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-gray-400 uppercase text-[10px] font-bold">Mijoz</p>
-                          <p className="font-medium">{order.masterName}</p>
-                          <p className="text-blue-600">{order.masterPhone}</p>
+                          <p className="font-medium italic">{order.masterName}</p>
+                          <p className="text-gold font-bold">{order.masterPhone}</p>
                         </div>
                         <div>
                           <p className="text-gray-400 uppercase text-[10px] font-bold">O'lchamlar</p>
@@ -242,13 +246,13 @@ export const AdminDashboard: React.FC<{
                         variant="outline" 
                         size="sm" 
                         onClick={() => onAction?.('chat', { senderId: order.masterId || order.userId })}
-                        className="rounded-xl flex-1 py-5 border-blue-200 text-blue-600 hover:bg-blue-50"
+                        className="rounded-xl flex-1 py-5 border-gold/20 text-gold hover:bg-gold/5 font-black uppercase text-[10px] tracking-widest"
                       >
                         <MessageSquare className="w-4 h-4 mr-2" />
                         Chatga o'tish
                       </Button>
                       {order.status === 'pending' && (
-                        <Button size="sm" onClick={() => handleUpdateStatus(order.id, 'processing')} className="bg-blue-600 hover:bg-blue-700 rounded-xl flex-1 py-5">
+                        <Button size="sm" onClick={() => handleUpdateStatus(order.id, 'processing')} className="bg-gold hover:bg-gold-light rounded-xl flex-1 py-5 shadow-lg shadow-gold/20 font-black uppercase text-[10px] tracking-widest">
                           Qabul qilish
                         </Button>
                       )}
@@ -313,40 +317,40 @@ export const AdminDashboard: React.FC<{
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-blue-600" />
+                <CardTitle className="flex items-center gap-2 font-black italic uppercase tracking-tighter">
+                  <Plus className="w-5 h-5 text-gold" />
                   Yangi ish jarayoni qo'shish
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleAddGalleryItem} className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Loyiha nomi</Label>
+                    <Label className="text-[10px] font-black text-gold/40 uppercase tracking-widest">Loyiha nomi</Label>
                     <Input 
                       value={newGalleryItem.title} 
                       onChange={(e) => setNewGalleryItem(prev => ({ ...prev, title: e.target.value }))}
                       placeholder="Masalan: Zamonaviy darvoza o'rnatish"
-                      className="rounded-xl"
+                      className="rounded-xl bg-gray-50 border-none shadow-inner"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Manzil</Label>
+                    <Label className="text-[10px] font-black text-gold/40 uppercase tracking-widest">Manzil</Label>
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                      <MapPin className="absolute left-3 top-3 w-4 h-4 text-gold/40" />
                       <Input 
                         value={newGalleryItem.location} 
                         onChange={(e) => setNewGalleryItem(prev => ({ ...prev, location: e.target.value }))}
                         placeholder="Masalan: Toshkent sh., Yunusobod tumani"
-                        className="pl-10 rounded-xl"
+                        className="pl-10 rounded-xl bg-gray-50 border-none shadow-inner"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Rasmlar (bir nechta tanlash mumkin)</Label>
+                    <Label className="text-[10px] font-black text-gold/40 uppercase tracking-widest">Rasmlar</Label>
                     <div className="flex flex-wrap gap-2 mb-2">
                       {newGalleryItem.images.map((img, i) => (
-                        <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden group">
+                        <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden group border border-gold/10">
                           <img src={img} className="w-full h-full object-cover" />
                           <button 
                             type="button"
@@ -357,15 +361,15 @@ export const AdminDashboard: React.FC<{
                           </button>
                         </div>
                       ))}
-                      <label className="w-20 h-20 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
-                        <Camera className="w-6 h-6 text-gray-400" />
-                        <span className="text-[10px] text-gray-400 font-bold mt-1">Qo'shish</span>
+                      <label className="w-20 h-20 border-2 border-dashed border-gold/20 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gold/5 transition-colors">
+                        <Camera className="w-6 h-6 text-gold/40" />
+                        <span className="text-[10px] text-gold/40 font-black uppercase mt-1">Qo'shish</span>
                         <input type="file" multiple onChange={handleImageUpload} className="hidden" accept="image/*" />
                       </label>
                     </div>
-                    {uploadingImages && <p className="text-xs text-blue-600 animate-pulse">Rasmlar yuklanmoqda...</p>}
+                    {uploadingImages && <p className="text-[10px] text-gold font-black uppercase tracking-widest animate-pulse">Rasmlar yuklanmoqda...</p>}
                   </div>
-                  <Button type="submit" disabled={uploadingImages} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-xl font-bold">
+                  <Button type="submit" disabled={uploadingImages} className="w-full bg-gold hover:bg-gold-light text-white py-8 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-gold/20 active:scale-95 transition-all">
                     Loyiha qo'shish
                   </Button>
                 </form>
@@ -420,51 +424,51 @@ export const AdminDashboard: React.FC<{
             <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-blue-600" />
+                  <Plus className="w-5 h-5 text-gold" />
                   Yangi usta qo'shish
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleAddCraftsman} className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Ism sharifi</Label>
+                    <Label className="text-[10px] font-black text-gold/40 uppercase tracking-widest">Ism sharifi</Label>
                     <Input 
                       value={newCraftsman.name} 
                       onChange={(e) => setNewCraftsman(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="Masalan: Umidjon Usta"
-                      className="rounded-xl"
+                      className="rounded-xl bg-gray-50 border-none shadow-inner"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Mutaxassisligi (vergul bilan ajrating)</Label>
+                    <Label className="text-[10px] font-black text-gold/40 uppercase tracking-widest">Mutaxassisligi (vergul bilan ajrating)</Label>
                     <Input 
                       value={newCraftsman.specialties} 
                       onChange={(e) => setNewCraftsman(prev => ({ ...prev, specialties: e.target.value }))}
                       placeholder="Darvozalar, Reshotkalar, Svarka"
-                      className="rounded-xl"
+                      className="rounded-xl bg-gray-50 border-none shadow-inner"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Bio (tajribasi haqida)</Label>
+                    <Label className="text-[10px] font-black text-gold/40 uppercase tracking-widest">Bio (tajribasi haqida)</Label>
                     <Textarea 
                       value={newCraftsman.bio} 
                       onChange={(e) => setNewCraftsman(prev => ({ ...prev, bio: e.target.value }))}
                       placeholder="8 yillik tajribaga ega usta..."
-                      className="rounded-xl min-h-[100px]"
+                      className="rounded-xl min-h-[100px] bg-gray-50 border-none shadow-inner"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Profil rasmi (URL)</Label>
+                    <Label className="text-[10px] font-black text-gold/40 uppercase tracking-widest">Profil rasmi (URL)</Label>
                     <Input 
                       value={newCraftsman.imageUrl} 
                       onChange={(e) => setNewCraftsman(prev => ({ ...prev, imageUrl: e.target.value }))}
                       placeholder="https://..."
-                      className="rounded-xl"
+                      className="rounded-xl bg-gray-50 border-none shadow-inner"
                     />
                   </div>
-                  <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-xl font-bold">
+                  <Button type="submit" className="w-full bg-gold hover:bg-gold-light text-white py-8 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-gold/20 active:scale-95 transition-all">
                     Usta qo'shish
                   </Button>
                 </form>
@@ -511,12 +515,16 @@ export const AdminDashboard: React.FC<{
           </div>
         </TabsContent>
 
+        <TabsContent value="users" className="space-y-8">
+          <CustomerManager />
+        </TabsContent>
+
         <TabsContent value="config">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-blue-600" />
+                  <Globe className="w-5 h-5 text-gold" />
                   Ijtimoiy tarmoqlar
                 </CardTitle>
               </CardHeader>
@@ -524,29 +532,29 @@ export const AdminDashboard: React.FC<{
                 <form onSubmit={handleUpdateSocial} className="space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
+                      <Label className="flex items-center gap-2 text-[10px] font-black text-gold/40 uppercase tracking-widest">
                         <TelegramIcon className="w-4 h-4 text-[#229ED9]" /> Telegram
                       </Label>
                       <Input 
                         value={socialLinks.telegram} 
                         onChange={(e) => setSocialLinks(prev => ({ ...prev, telegram: e.target.value }))}
                         placeholder="https://t.me/svark_uz"
-                        className="rounded-xl"
+                        className="rounded-xl bg-gray-50 border-none shadow-inner"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
+                      <Label className="flex items-center gap-2 text-[10px] font-black text-gold/40 uppercase tracking-widest">
                         <Instagram className="w-4 h-4 text-[#E4405F]" /> Instagram
                       </Label>
                       <Input 
                         value={socialLinks.instagram} 
                         onChange={(e) => setSocialLinks(prev => ({ ...prev, instagram: e.target.value }))}
                         placeholder="https://www.instagram.com/svark_uz"
-                        className="rounded-xl"
+                        className="rounded-xl bg-gray-50 border-none shadow-inner"
                       />
                     </div>
                   </div>
-                  <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-xl font-bold">
+                  <Button type="submit" className="w-full bg-gold hover:bg-gold-light text-white py-8 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-gold/20 active:scale-95 transition-all">
                     Saqlash
                   </Button>
                 </form>
@@ -555,8 +563,8 @@ export const AdminDashboard: React.FC<{
 
             <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-600" />
+                <CardTitle className="flex items-center gap-2 font-black italic uppercase tracking-tighter">
+                  <Users className="w-5 h-5 text-gold" />
                   Ustalar boshqaruvi
                 </CardTitle>
               </CardHeader>
@@ -587,7 +595,10 @@ export const AdminDashboard: React.FC<{
             <MessageSquare className="w-12 h-12 text-gray-200 mx-auto mb-4" />
             <h3 className="text-xl font-bold">Xabarlar</h3>
             <p className="text-gray-500">Mijozlardan kelgan barcha xabarlarni ko'rish.</p>
-            <Button onClick={() => onAction?.('chat')} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
+            <Button 
+              onClick={() => onAction?.('chat')} 
+              className="mt-4 bg-gold hover:bg-gold-light text-white rounded-xl font-black uppercase text-[10px] tracking-widest h-12 px-8 shadow-xl shadow-gold/20 active:scale-95 transition-all"
+            >
               Chatga o'tish
             </Button>
           </Card>
