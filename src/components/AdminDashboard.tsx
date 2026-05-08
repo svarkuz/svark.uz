@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Package, Users, Settings, Shield, Camera, Trash2, Globe, Instagram, Send as TelegramIcon, MapPin, ImageIcon as ImageIconLucide, MessageSquare, Briefcase, CheckCircle2 } from 'lucide-react';
+import { Plus, Package, Users, Settings, Shield, Camera, Trash2, Globe, Instagram, Send as TelegramIcon, MapPin, ImageIcon as ImageIconLucide, MessageSquare, Briefcase, CheckCircle2, Youtube, Play, Film } from 'lucide-react';
 import { CustomerManager } from './CustomerManager';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
@@ -22,8 +22,10 @@ export const AdminDashboard: React.FC<{
   const [gallery, setGallery] = useState<any[]>([]);
   const [craftsmen, setCraftsmen] = useState<any[]>([]);
   const [socialLinks, setSocialLinks] = useState<any>({ telegram: '', instagram: '' });
+  const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newGalleryItem, setNewGalleryItem] = useState({ title: '', location: '', images: [] as string[] });
+  const [newVideo, setNewVideo] = useState({ title: '', url: '', description: '' });
   const [newCraftsman, setNewCraftsman] = useState({ name: '', bio: '', specialties: '', imageUrl: '', portfolio: [] as string[] });
   const [completingOrderId, setCompletingOrderId] = useState<string | null>(null);
   const [completionImage, setCompletionImage] = useState<string | null>(null);
@@ -59,11 +61,17 @@ export const AdminDashboard: React.FC<{
       setCraftsmen(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
+    const qVideos = query(collection(db, 'videos'), orderBy('createdAt', 'desc'));
+    const unsubVideos = onSnapshot(qVideos, (snapshot) => {
+      setVideos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
     return () => {
       unsubOrders();
       unsubGallery();
       unsubSocial();
       unsubCraftsmen();
+      unsubVideos();
     };
   }, []);
 
@@ -160,6 +168,35 @@ export const AdminDashboard: React.FC<{
     }
   };
 
+  const handleAddVideo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVideo.url) {
+      toast.error("Video URL manzilini kiriting");
+      return;
+    }
+    try {
+      // Simple YouTube URL normalization
+      let finalUrl = newVideo.url;
+      if (finalUrl.includes('youtube.com/watch?v=')) {
+        const id = finalUrl.split('v=')[1]?.split('&')[0];
+        finalUrl = `https://www.youtube.com/embed/${id}`;
+      } else if (finalUrl.includes('youtu.be/')) {
+        const id = finalUrl.split('youtu.be/')[1]?.split('?')[0];
+        finalUrl = `https://www.youtube.com/embed/${id}`;
+      }
+
+      await addDoc(collection(db, 'videos'), {
+        ...newVideo,
+        url: finalUrl,
+        createdAt: serverTimestamp()
+      });
+      setNewVideo({ title: '', url: '', description: '' });
+      toast.success("Video qo'shildi");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'videos');
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -188,10 +225,13 @@ export const AdminDashboard: React.FC<{
               <TabsTrigger value="config" className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:text-gold text-xs sm:text-sm font-bold transition-all">
                 4. Sozlamalar
               </TabsTrigger>
+              <TabsTrigger value="videos" className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:text-gold text-xs sm:text-sm font-bold transition-all">
+                5. Videolar
+              </TabsTrigger>
             </>
           )}
           <TabsTrigger value="chat" className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:text-gold text-xs sm:text-sm font-bold transition-all">
-            {userProfile?.role === 'admin' ? '5. Chat' : '2. Chat'}
+            {userProfile?.role === 'admin' ? '6. Chat' : '2. Chat'}
           </TabsTrigger>
         </TabsList>
 
@@ -564,20 +604,190 @@ export const AdminDashboard: React.FC<{
             <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-black italic uppercase tracking-tighter">
-                  <Users className="w-5 h-5 text-gold" />
-                  Ustalar boshqaruvi
+                  <Briefcase className="w-5 h-5 text-gold" />
+                  Usta haqida ma'lumot (Bio)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-gold/40 uppercase tracking-widest">Master haqida bio (Bosh sahifa uchun)</Label>
+                  <Textarea 
+                    value={newCraftsman.bio} // Temporarily using this to store bio
+                    onChange={(e) => setNewCraftsman(prev => ({ ...prev, bio: e.target.value }))}
+                    placeholder="Bosh sahifada ko'rinadigan ma'lumot..."
+                    className="rounded-xl min-h-[120px] bg-gray-50 border-none shadow-inner"
+                  />
+                </div>
                 <Button 
-                  onClick={() => {/* existing logic for craftsmen is separated in the code but user wants consolidated admin panel */}} 
-                  variant="outline"
-                  className="w-full rounded-xl py-6"
+                  onClick={async () => {
+                    try {
+                      await setDoc(doc(db, 'settings', 'about'), { bio: newCraftsman.bio });
+                      toast.success("Usta haqida ma'lumot yangilandi");
+                    } catch (e) {
+                      toast.error("Xatolik yuz berdi");
+                    }
+                  }} 
+                  className="w-full bg-black text-white hover:bg-gray-900 rounded-xl py-6 font-black uppercase tracking-widest"
                 >
-                  Barcha ustalarni ko'rish
+                  Bio ni saqlash
                 </Button>
               </CardContent>
             </Card>
+
+            <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-black italic uppercase tracking-tighter text-red-600">
+                  <Trash2 className="w-5 h-5" />
+                  Tizimni tozalash
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-red-50 p-4 rounded-2xl border border-red-100">
+                  <p className="text-xs font-bold text-red-700 uppercase mb-2">Diqqat!</p>
+                  <p className="text-[11px] text-red-600 leading-relaxed italic">
+                    "Tizimni tozalash buyurtmalar, xabarlar va bildirishnomalarni butunlay o'chirib yuboradi. Ushbu amalni ortga qaytarib bo'lmaydi."
+                  </p>
+                </div>
+                <div className="space-y-3 pt-2">
+                  <Button 
+                    onClick={async () => {
+                      if (confirm("Haqiqatan ham barcha buyurtmalarni o'chirmoqchimisiz?")) {
+                        try {
+                          const { getDocs, deleteDoc, doc, collection } = await import('firebase/firestore');
+                          const snap = await getDocs(collection(db, 'orders'));
+                          for (const d of snap.docs) await deleteDoc(doc(db, 'orders', d.id));
+                          toast.success("Barcha buyurtmalar o'chirildi");
+                        } catch (e) { toast.error("Xatolik yuz berdi"); }
+                      }
+                    }} 
+                    variant="outline"
+                    className="w-full border-red-100 text-red-500 hover:bg-red-50 rounded-xl py-4 font-black uppercase text-[10px] tracking-widest"
+                  >
+                    Buyurtmalarni tozalash (History)
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      if (confirm("Haqiqatan ham barcha chat xabarlarini o'chirmoqchimisiz?")) {
+                        try {
+                          const { getDocs, deleteDoc, doc, collection } = await import('firebase/firestore');
+                          const snap = await getDocs(collection(db, 'messages'));
+                          for (const d of snap.docs) await deleteDoc(doc(db, 'messages', d.id));
+                          toast.success("Barcha xabarlar o'chirildi");
+                        } catch (e) { toast.error("Xatolik yuz berdi"); }
+                      }
+                    }} 
+                    variant="outline"
+                    className="w-full border-red-100 text-red-500 hover:bg-red-50 rounded-xl py-4 font-black uppercase text-[10px] tracking-widest"
+                  >
+                    Chatlarni tozalash
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      if (confirm("Haqiqatan ham barcha bildirishnomalarni o'chirmoqchimisiz?")) {
+                        try {
+                          const { getDocs, deleteDoc, doc, collection } = await import('firebase/firestore');
+                          const snap = await getDocs(collection(db, 'notifications'));
+                          for (const d of snap.docs) await deleteDoc(doc(db, 'notifications', d.id));
+                          toast.success("Bildirishnomalar o'chirildi");
+                        } catch (e) { toast.error("Xatolik yuz berdi"); }
+                      }
+                    }} 
+                    variant="outline"
+                    className="w-full border-red-100 text-red-500 hover:bg-red-50 rounded-xl py-4 font-black uppercase text-[10px] tracking-widest"
+                  >
+                    Bildirishnomalarni tozalash
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="videos" className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-black italic uppercase tracking-tighter">
+                  <Youtube className="w-5 h-5 text-red-600" />
+                  Yangi video qo'shish
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleAddVideo} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-gold/40 uppercase tracking-widest">Video nomi</Label>
+                    <Input 
+                      value={newVideo.title} 
+                      onChange={(e) => setNewVideo(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Masalan: Darvoza yasash jarayoni"
+                      className="rounded-xl bg-gray-50 border-none shadow-inner"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-gold/40 uppercase tracking-widest">YouTube URL manzili</Label>
+                    <div className="relative">
+                      <Play className="absolute left-3 top-3 w-4 h-4 text-gold/40" />
+                      <Input 
+                        value={newVideo.url} 
+                        onChange={(e) => setNewVideo(prev => ({ ...prev, url: e.target.value }))}
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        className="pl-10 rounded-xl bg-gray-50 border-none shadow-inner"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-gold/40 uppercase tracking-widest">Tavsif (ixtiyoriy)</Label>
+                    <Textarea 
+                      value={newVideo.description} 
+                      onChange={(e) => setNewVideo(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Video haqida qisqacha ma'lumot..."
+                      className="rounded-xl bg-gray-50 border-none shadow-inner"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white py-8 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-red-200 active:scale-95 transition-all">
+                    Video qo'shish
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <h3 className="font-bold text-lg px-2">Mavjud videolar</h3>
+              <ScrollArea className="h-[500px]">
+                <div className="grid grid-cols-1 gap-4 pr-4">
+                  {videos.map((item) => (
+                    <Card key={item.id} className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
+                      <div className="flex gap-4 p-4">
+                        <div className="w-32 h-20 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 relative">
+                          <Film className="absolute inset-0 m-auto w-8 h-8 text-gray-300" />
+                          {/* We could show thumbnail here if we extract it from URL */}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold truncate">{item.title}</h4>
+                          <p className="text-xs text-gray-500 line-clamp-2">{item.description}</p>
+                          <p className="text-[10px] text-blue-500 truncate mt-1">{item.url}</p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={async () => {
+                            if (confirm("Ushbu videoni o'chirmoqchimisiz?")) {
+                              await deleteDoc(doc(db, 'videos', item.id));
+                              toast.success("Video o'chirildi");
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
           </div>
         </TabsContent>
 

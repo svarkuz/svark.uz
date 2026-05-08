@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, where, setDoc, updateDoc, serverTimestamp, getDocFromServer } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, setDoc, updateDoc, serverTimestamp, getDocFromServer, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 
 import { Navbar } from '@/src/components/Navbar';
@@ -104,6 +104,7 @@ function AppContent() {
   };
   const [socialLinks, setSocialLinks] = useState<any>({ telegram: 'https://t.me/svark_uz', instagram: 'https://www.instagram.com/svark_uz?igsh=MW0xNHdqeThlaHRsOA==' });
   const [aboutUs, setAboutUs] = useState<string>('');
+  const [videos, setVideos] = useState<any[]>([]);
 
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
@@ -118,7 +119,7 @@ function AppContent() {
     return localStorage.getItem('customerSession') === 'true';
   });
   const [localCustomerData, setLocalCustomerData] = useState<any>(() => {
-    const data = localStorage.getItem('customerData');
+    const data = localStorage.getItem('customer_session');
     return data ? JSON.parse(data) : null;
   });
 
@@ -128,7 +129,7 @@ function AppContent() {
   
   const effectiveUser = user || 
     (isWorkerSession ? { uid: 'worker_session', displayName: 'Umid (Ishchi)', role: 'master' } : 
-    (isCustomerSession ? { uid: localCustomerData?.uid, displayName: localCustomerData?.displayName, isLocal: true, role: 'customer' } : null));
+    (isCustomerSession ? { ...localCustomerData, isLocal: true, role: 'customer' } : null));
 
   const effectiveProfile = userProfile || 
     (isWorkerSession ? { role: 'master', displayName: 'Umid (Ishchi)' } : 
@@ -182,17 +183,29 @@ function AppContent() {
       if (docSnap.exists()) {
         setSocialLinks(docSnap.data());
       }
+    }, (error) => {
+      console.warn("Social settings listener permission denied:", error);
     });
 
     const unsubAbout = onSnapshot(doc(db, 'settings', 'about'), (docSnap) => {
       if (docSnap.exists()) {
         setAboutUs(docSnap.data().bio || '');
       }
+    }, (error) => {
+      console.warn("About settings listener permission denied:", error);
+    });
+
+    const qVideos = query(collection(db, 'videos'), orderBy('createdAt', 'desc'));
+    const unsubVideos = onSnapshot(qVideos, (snapshot) => {
+      setVideos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.warn("Videos listener permission denied:", error);
     });
 
     return () => {
       unsubSocial();
       unsubAbout();
+      unsubVideos();
     };
   }, []);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -306,8 +319,40 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      
+      // Handle Email Link Sign In
+      const { isSignInWithEmailLink, signInWithEmailLink } = await import('firebase/auth');
+      if (isSignInWithEmailLink(auth, window.location.href)) {
+        let email = window.localStorage.getItem('emailForSignIn');
+        if (!email) {
+          email = window.prompt('Iltimos, tasdiqlash uchun emailingizni kiriting:');
+        }
+        if (email) {
+          try {
+            const result = await signInWithEmailLink(auth, email, window.location.href);
+            window.localStorage.removeItem('emailForSignIn');
+            toast.success("Muvaffaqiyatli kirdingiz!");
+            // Update profile if new user
+            const userRef = doc(db, 'users', result.user.uid);
+            const userDoc = await getDocFromServer(userRef);
+            if (!userDoc.exists()) {
+              await setDoc(userRef, {
+                uid: result.user.uid,
+                email: result.user.email,
+                role: 'customer',
+                profileComplete: false,
+                createdAt: serverTimestamp()
+              });
+            }
+          } catch (error) {
+            console.error("Email link sign in error:", error);
+            toast.error("Havola yaroqsiz yoki muddati o'tgan");
+          }
+        }
+      }
+
       if (!currentUser) {
         setUserProfile(null);
         if (!isWorkerSession && !isCustomerSession) setLoading(false);
@@ -355,17 +400,18 @@ function AppContent() {
       setIsCustomerSession(true);
       setLocalCustomerData(data);
       localStorage.setItem('customerSession', 'true');
-      localStorage.setItem('customerData', JSON.stringify(data));
+      localStorage.setItem('customer_session', JSON.stringify(data));
       
       const userData: any = {
         uid: data.uid,
         role: 'customer',
         profileComplete: true,
-        createdAt: serverTimestamp(),
+        displayName: data.displayName || 'Mijoz',
+        createdAt: data.createdAt || serverTimestamp(),
         updatedAt: serverTimestamp()
       };
-      if (data.displayName) userData.displayName = data.displayName;
       if (data.phone) userData.phone = data.phone;
+      if (data.email) userData.email = data.email;
       
       try {
         await setDoc(doc(db, 'users', data.uid), userData, { merge: true });
@@ -376,7 +422,7 @@ function AppContent() {
       setIsCustomerSession(false);
       setLocalCustomerData(null);
       localStorage.removeItem('customerSession');
-      localStorage.removeItem('customerData');
+      localStorage.removeItem('customer_session');
     }
   };
 
@@ -394,7 +440,7 @@ function AppContent() {
     );
   }
 
-  const needsProfileSetup = user && userProfile && userProfile.profileComplete === false && !isWorkerSession && !isCustomerSession;
+  const needsProfileSetup = user && userProfile && (userProfile.profileComplete === false || !userProfile.phone) && !isWorkerSession && !isCustomerSession;
 
   const logoUrl = "https://i.ibb.co/kg3vHQyN/photo-2026-05-03-13-33-41.jpg";
 
@@ -501,6 +547,126 @@ function AppContent() {
                     <User className="w-6 h-6 ml-2 group-hover:scale-110 transition-transform" />
                   </Button>
                 </motion.div>
+
+                {/* About Usta Section */}
+                <div className="w-full mt-32 space-y-32">
+                   {/* Welcome stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                     {[
+                       { label: 'Tajriba', value: '10+', sub: 'Yillik' },
+                       { label: 'Mijozlar', value: '1,200+', sub: 'Mamnun' },
+                       { label: 'Loyihalar', value: '500+', sub: 'Yakunlangan' },
+                       { label: 'Sifat', value: '100%', sub: 'Kafolat' }
+                     ].map((stat, i) => (
+                       <motion.div 
+                         initial={{ opacity: 0, y: 20 }}
+                         animate={{ opacity: 1, y: 0 }}
+                         transition={{ delay: 0.1 * i }}
+                         key={i} 
+                         className="text-center p-8 bg-gray-50 dark:bg-gray-900 rounded-[2.5rem] border border-gold/5"
+                       >
+                         <p className="text-3xl font-black text-gold mb-1">{stat.value}</p>
+                         <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{stat.label}</p>
+                         <p className="text-[8px] font-bold text-gold/40 uppercase mt-1">{stat.sub}</p>
+                       </motion.div>
+                     ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center text-left">
+                    <div className="space-y-10">
+                      <div className="space-y-6">
+                        <Badge className="bg-gold text-white border-none rounded-full px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-gold/20">
+                          {language === 'uz' ? "Usta haqida" : "О мастере"}
+                        </Badge>
+                        <h2 className="text-5xl sm:text-7xl font-black italic tracking-tighter uppercase leading-[0.9]">
+                          {language === 'uz' ? "Professional" : "Профессиональный"} <br />
+                          <span className="text-gold">{language === 'uz' ? "Temir ustasi" : "Мастер по металлу"}</span>
+                        </h2>
+                        <p className="text-xl text-gray-400 font-bold uppercase tracking-widest">Umidjon Usta & Guruhi</p>
+                      </div>
+                      
+                      <div className="space-y-6">
+                        <p className="text-lg text-gray-500 dark:text-gray-400 font-medium leading-relaxed italic border-l-8 border-gold pl-8">
+                          {aboutUs || (language === 'uz' ? "Bizning jamoamiz yuqori sifatli temir mahsulotlari ishlab chiqarish va o'rnatish bilan shug'ullanadi. Har bir buyurtmaga professional yondashamiz. 10 yillik tajriba va yuzlab mamnun mijozlar bizning sifatimiz belgisidir." : "Наша команда занимается производством и установкой высококачественных металлических изделий. Мы подходим к каждому заказу профессионально.")}
+                        </p>
+                        <div className="flex flex-wrap gap-4 pt-4">
+                          {['Darvozalar', 'Naveslar', 'Reshotkalar', 'Perilalar'].map((tag) => (
+                            <span key={tag} className="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Button 
+                        variant="outline"
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-login-modal'))}
+                        className="h-16 px-8 rounded-2xl border-2 border-gold text-gold font-black uppercase tracking-widest hover:bg-gold hover:text-white transition-all"
+                      >
+                         Batafsil ma'lumot
+                      </Button>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute -inset-4 bg-gold rounded-[4rem] group-hover:rotate-3 transition-transform opacity-10 blur-2xl" />
+                      <div className="relative aspect-[4/5] overflow-hidden rounded-[3.5rem] shadow-2xl border-8 border-white dark:border-gray-900">
+                        <img 
+                          src="https://i.ibb.co/kg3vHQyN/photo-2026-05-03-13-33-41.jpg" 
+                          className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000 scale-110 hover:scale-100" 
+                          alt="Umidjon Usta"
+                        />
+                        <div className="absolute bottom-0 inset-x-0 p-10 bg-gradient-to-t from-black/80 to-transparent">
+                          <p className="text-white text-3xl font-black italic uppercase tracking-tighter">Umidjon</p>
+                          <p className="text-gold text-xs font-black uppercase tracking-[0.3em]">Bosh Usta</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Videos Section - Ish Jarayoni */}
+                  {videos.length > 0 && (
+                    <div className="space-y-16">
+                      <div className="text-center space-y-4">
+                        <Badge className="bg-black text-white dark:bg-white dark:text-black border-none rounded-full px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em]">
+                          Video Galereya
+                        </Badge>
+                        <h3 className="text-4xl sm:text-6xl font-black italic uppercase tracking-tighter">
+                          {language === 'uz' ? "Ish jarayonidan" : "С процесса работы"} <span className="text-gold">videolar</span>
+                        </h3>
+                        <p className="text-gray-400 text-sm font-medium uppercase tracking-[0.3em] max-w-xl mx-auto">Sifat qanday yaratilishini o'z ko'zingiz bilan ko'ring</p>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                        {videos.slice(0, 4).map((video) => (
+                          <motion.div 
+                            key={video.id} 
+                            whileHover={{ y: -10 }}
+                            className="group relative bg-black rounded-[3rem] overflow-hidden shadow-2xl aspect-video border-4 border-white dark:border-gray-800"
+                          >
+                            <iframe 
+                              src={video.url}
+                              className="w-full h-full border-none opacity-90 group-hover:opacity-100 transition-opacity"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                              allowFullScreen
+                            />
+                            <div className="absolute bottom-0 inset-x-0 p-10 bg-gradient-to-t from-black to-transparent pointer-events-none group-hover:translate-y-0 translate-y-4 transition-transform duration-500">
+                              <h4 className="text-white font-black uppercase italic tracking-tighter text-2xl">{video.title}</h4>
+                              {video.description && <p className="text-white/60 text-sm mt-3 line-clamp-1 font-medium italic">"{video.description}"</p>}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      <div className="text-center">
+                        <Button 
+                          onClick={() => window.dispatchEvent(new CustomEvent('open-login-modal'))}
+                          className="bg-gray-50 hover:bg-gray-100 text-gray-500 h-16 px-10 rounded-2xl font-black uppercase tracking-widest shadow-sm"
+                        >
+                          Barcha videolarni ko'rish
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Rest of the landing page... */}
@@ -687,7 +853,7 @@ function AppContent() {
               </div>
 
               <AnimatePresence mode="wait">
-                <TabsContent value="catalog" key="catalog-content">
+                <TabsContent value="catalog" key="catalog">
                   <motion.div
                     key="catalog-div"
                     initial={{ opacity: 0, x: -20 }}
@@ -708,7 +874,7 @@ function AppContent() {
                   </motion.div>
                 </TabsContent>
 
-                <TabsContent value="gallery" key="gallery-content">
+                <TabsContent value="gallery" key="gallery">
                   <motion.div
                     key="gallery-div"
                     initial={{ opacity: 0, x: -20 }}
@@ -719,18 +885,22 @@ function AppContent() {
                   </motion.div>
                 </TabsContent>
 
-                <TabsContent value="workflows" key="workflows-content">
+                <TabsContent value="workflows" key="workflows">
                   <motion.div
                     key="workflows-div"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="p-4 sm:p-8"
                   >
-                    <WorkflowManager user={effectiveUser} />
+                    <div className="max-w-4xl mx-auto space-y-8">
+                       <h2 className="text-4xl font-black italic uppercase tracking-tighter text-gray-900 border-l-8 border-gold pl-8">Bizning ish jarayonimiz</h2>
+                       <WorkflowManager user={effectiveUser} />
+                    </div>
                   </motion.div>
                 </TabsContent>
 
-                <TabsContent value="customers" key="customers-content">
+                <TabsContent value="customers" key="customers">
                   <motion.div
                     key="customers-div"
                     initial={{ opacity: 0, x: -20 }}
@@ -741,7 +911,7 @@ function AppContent() {
                   </motion.div>
                 </TabsContent>
 
-                <TabsContent value="svark-ai" key="svark-ai-content">
+                <TabsContent value="svark-ai" key="svark-ai">
                   <motion.div
                     key="svark-ai-div"
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -816,7 +986,7 @@ function AppContent() {
                   </motion.div>
                 </TabsContent>
 
-                <TabsContent value="chat" key="chat-content">
+                <TabsContent value="chat" key="chat">
                   <motion.div
                     key="chat-div"
                     initial={{ opacity: 0, x: -20 }}
@@ -832,21 +1002,7 @@ function AppContent() {
                   </motion.div>
                 </TabsContent>
 
-                <TabsContent value="workflows" key="workflows-content">
-                  <motion.div
-                    key="workflows-div"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 sm:p-8"
-                  >
-                    <div className="max-w-4xl mx-auto space-y-8">
-                       <h2 className="text-4xl font-black italic uppercase tracking-tighter text-gray-900 border-l-8 border-gold pl-8">Bizning ish jarayonimiz</h2>
-                       <WorkflowManager user={null} />
-                    </div>
-                  </motion.div>
-                </TabsContent>
-
-                <TabsContent value="my-reviews" key="reviews-content">
+                <TabsContent value="my-reviews" key="my-reviews">
                   <motion.div
                     key="reviews-div"
                     initial={{ opacity: 0, y: 20 }}
@@ -870,7 +1026,7 @@ function AppContent() {
                     </div>
                   </motion.div>
                 </TabsContent>
-                <TabsContent value="notifications" key="notifications-content">
+                <TabsContent value="notifications" key="notifications">
                   <motion.div
                     key="notifications-div"
                     initial={{ opacity: 0, x: -20 }}
@@ -894,7 +1050,7 @@ function AppContent() {
                   </motion.div>
                 </TabsContent>
                 
-                <TabsContent value="my-orders" key="orders-content">
+                <TabsContent value="my-orders" key="my-orders">
                   <motion.div
                     key="orders-div"
                     initial={{ opacity: 0, x: -20 }}
@@ -905,7 +1061,7 @@ function AppContent() {
                   </motion.div>
                 </TabsContent>
 
-                <TabsContent value="profile-settings" key="profile-settings-content">
+                <TabsContent value="profile-settings" key="profile-settings">
                   <motion.div
                     key="profile-settings-div"
                     initial={{ opacity: 0, x: -20 }}
@@ -930,7 +1086,7 @@ function AppContent() {
                 </TabsContent>
 
                 {isAdminOrWorker && (
-                  <TabsContent value="admin" key="admin-content">
+                  <TabsContent value="admin" key="admin">
                     <motion.div
                       key="admin-div"
                       initial={{ opacity: 0, x: -20 }}

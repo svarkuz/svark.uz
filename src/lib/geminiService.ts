@@ -21,7 +21,7 @@ export async function generateImageDescription(imageUrl: string) {
       contents: [
         {
           text: `Siz svark_uz kompaniyasining AI yordamchisiz. 
-          Ushbu rasmda ko'rsatilgan temir darvoza yoki reshotka haqida qisqacha, professional va qiziqarli tavsif yozing. 
+          Ushbu rasmda ko'rsatilgan temir darvoza yoki reshotka haqida JUDA QISQA (1-2 ta gap), professional va qiziqarli tavsif yozing. 
           Rasm URL: ${imageUrl}
           Tavsif o'zbek tilida bo'lsin. Dizayn, mustahkamlik va uslubga e'tibor bering.`
         }

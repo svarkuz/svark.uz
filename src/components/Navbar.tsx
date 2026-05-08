@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db } from '../lib/firebase';
-import { RecaptchaVerifier, signInWithPhoneNumber, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signOut, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -39,13 +39,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [loginOpen, setLoginOpen] = useState(false);
   const [workerName, setWorkerName] = useState('');
   const [workerPass, setWorkerPass] = useState('');
-  const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const [smsCode, setSmsCode] = useState('');
-  const [verificationId, setVerificationId] = useState<any>(null);
+  const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [showOtp, setShowOtp] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showOtp, setShowOtp] = useState(false);
 
   useEffect(() => {
     const handleOpenLogin = () => setLoginOpen(true);
@@ -55,88 +57,29 @@ export const Navbar: React.FC<NavbarProps> = ({
     };
   }, []);
 
-  const setupRecaptcha = () => {
-    if (!(window as any).recaptchaVerifier) {
-      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible'
-      });
-    }
-  };
-
-  const handlePhoneLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customerPhone) return;
-    
-    setLoading(true);
-    setError('');
-    setupRecaptcha();
-    
-    const appVerifier = (window as any).recaptchaVerifier;
-    try {
-      const formattedPhone = customerPhone.startsWith('+') ? customerPhone : `+${customerPhone}`;
-      const confirmationResult = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
-      setVerificationId(confirmationResult);
-      setShowOtp(true);
-      toast.success(language === 'uz' ? "SMS kod yuborildi!" : "SMS код отправлен!");
-    } catch (err: any) {
-      console.error(err);
-      setError(language === 'uz' ? "Raqam noto'g'ri yoki xatolik yuz berdi" : "Неверный номер или произошла ошибка");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!smsCode || !verificationId) return;
-
-    setLoading(true);
-    setError('');
-    try {
-      const result = await verificationId.confirm(smsCode);
-      const user = result.user;
-      
-      const userData = {
-        uid: user.uid,
-        displayName: customerName || 'Mijoz',
-        phone: user.phoneNumber,
-        role: 'customer',
-        profileComplete: true,
-        createdAt: serverTimestamp()
-      };
-
-      await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
-      onCustomerLogin(userData);
-      setLoginOpen(false);
-      toast.success(t('welcome'));
-    } catch (err: any) {
-      setError(language === 'uz' ? "Kod noto'g'ri" : "Неверный код");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     setLoading(true);
     try {
       const result = await signInWithPopup(auth, provider);
-      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
+      const userRef = doc(db, 'users', result.user.uid);
+      const userDoc = await getDoc(userRef);
       
+      const role = userDoc.exists() ? userDoc.data()?.role : (result.user.email === 'kidsafeuzb@gmail.com' ? 'admin' : 'customer');
+
       if (!userDoc.exists()) {
-        await setDoc(doc(db, 'users', result.user.uid), {
+        await setDoc(userRef, {
           uid: result.user.uid,
           displayName: result.user.displayName,
+          firstName: result.user.displayName?.split(' ')[0] || '',
+          lastName: result.user.displayName?.split(' ').slice(1).join(' ') || '',
           email: result.user.email,
-          role: result.user.email === 'kidsafeuzb@gmail.com' ? 'admin' : 'master',
-          profileComplete: true,
+          role: role,
+          profileComplete: false,
           createdAt: serverTimestamp()
         });
       }
 
-      // Handle session based on role
-      const role = userDoc.exists() ? userDoc.data()?.role : (result.user.email === 'kidsafeuzb@gmail.com' ? 'admin' : 'master');
-      
       if (role === 'admin' || role === 'master') {
         onWorkerLogin(true);
       } else {
@@ -158,6 +101,69 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  const setupRecaptcha = () => {
+    if (!(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible'
+      });
+    }
+  };
+
+  const handleSimpleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const identifier = loginMethod === 'phone' ? customerPhone : customerEmail;
+    if (!identifier || !customerName) {
+      toast.error(language === 'uz' ? "Ism va aloqa ma'lumotini kiriting" : "Введите имя и контактную информацию");
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Create a unique ID based on phone or email
+      const userUid = loginMethod === 'phone' 
+        ? `phone_${identifier.replace(/\D/g, '')}` 
+        : `email_${identifier.replace(/[@.]/g, '_')}`;
+        
+      const userRef = doc(db, 'users', userUid);
+      const userDoc = await getDoc(userRef);
+
+      let userData;
+      if (userDoc.exists()) {
+        userData = userDoc.data();
+        // Update name if changed
+        if (userData.displayName !== customerName) {
+          await setDoc(userRef, { ...userData, displayName: customerName }, { merge: true });
+          userData.displayName = customerName;
+        }
+      } else {
+        userData = {
+          uid: userUid,
+          displayName: customerName,
+          phone: loginMethod === 'phone' ? identifier : null,
+          email: loginMethod === 'email' ? identifier : null,
+          role: 'customer',
+          profileComplete: false,
+          createdAt: serverTimestamp()
+        };
+        await setDoc(userRef, userData);
+      }
+
+      onCustomerLogin(userData);
+      setLoginOpen(false);
+      toast.success(language === 'uz' ? "Xush kelibsiz!" : "Добро пожаловать!");
+      
+      // Save for persistence in window if needed by App.tsx
+      localStorage.setItem('customer_session', JSON.stringify(userData));
+    } catch (err: any) {
+      console.error(err);
+      setError(language === 'uz' ? "Xatolik yuz berdi" : "Произошла ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleWorkerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!workerName || !workerPass) return;
@@ -165,7 +171,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     setLoading(true);
     setError('');
     // Updated verification with master name and password
-    if (workerName === 'Umid' && workerPass === '201030SamatovUmid') {
+    if (workerName === 'Umid' && workerPass === '201030') {
       onWorkerLogin(true);
       setLoginOpen(false);
       toast.success(t('welcome'));
@@ -258,134 +264,149 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <DialogContent className={`sm:max-w-[440px] rounded-[3rem] p-0 overflow-hidden border ${theme === 'dark' ? 'bg-gray-950 border-gray-800' : 'bg-white border-gold/20'} shadow-[0_0_50px_rgba(184,134,11,0.15)]`}>
                   <div className="bg-gold p-12 text-white relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full -mr-20 -mt-20 blur-3xl" />
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mb-16 blur-2xl" />
-                    <h2 className="text-4xl font-black italic tracking-tighter mb-2 relative z-10 uppercase">{t('welcome')}</h2>
-                    <p className="text-white/80 text-xs relative z-10 font-bold uppercase tracking-widest">{t('premium_services')}</p>
+                    <DialogHeader className="relative z-10">
+                      <DialogTitle className="text-4xl font-black italic uppercase tracking-tighter text-white">
+                        {t('login')}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <p className="text-white/80 font-black uppercase tracking-widest text-[10px] mt-4 relative z-10">
+                      {t('welcome_back')}
+                    </p>
                   </div>
-                  <div className={`p-8 ${theme === 'dark' ? 'bg-gray-950' : 'bg-white'}`}>
-                    <Tabs defaultValue="customer" className="w-full">
-                      <TabsList className={`grid w-full grid-cols-2 mb-8 ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gold/10'} p-1.5 rounded-[1.5rem] border`}>
-                        <TabsTrigger value="customer" className="rounded-xl py-3 flex gap-2 font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-gold data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-gray-400">
-                          <Users className="w-4 h-4" /> {t('customer')}
+
+                  <div className="p-10">
+                    <Tabs defaultValue="client" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2 rounded-2xl bg-gray-50 p-1 mb-8 shadow-inner border border-gold/5">
+                        <TabsTrigger value="client" className="rounded-xl font-black uppercase italic tracking-widest text-[10px] py-3 data-[state=active]:bg-gold data-[state=active]:text-white shadow-sm transition-all">
+                          <User className="w-3 h-3 mr-2" />
+                          Mijoz
                         </TabsTrigger>
-                        <TabsTrigger value="worker" className="rounded-xl py-3 flex gap-2 font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-gold data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-gray-400">
-                          <HardHat className="w-4 h-4" /> {t('worker')}
+                        <TabsTrigger value="usta" className="rounded-xl font-black uppercase italic tracking-widest text-[10px] py-3 data-[state=active]:bg-black data-[state=active]:text-white shadow-sm transition-all">
+                          <HardHat className="w-3 h-3 mr-2" />
+                          Usta
                         </TabsTrigger>
                       </TabsList>
                       
-                      <TabsContent value="customer" className="space-y-6">
-                        {!showOtp ? (
-                          <form onSubmit={handlePhoneLogin} className="space-y-6">
-                            <div className="space-y-3">
-                              <Label htmlFor="customerName" className="text-[10px] font-black text-gold uppercase tracking-[0.2em] ml-1">{t('enter_name')}</Label>
-                              <div className="relative">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gold/30" />
-                                <Input 
-                                  id="customerName" 
-                                  value={customerName} 
-                                  onChange={(e) => setCustomerName(e.target.value)}
-                                  placeholder={t('enter_name')}
-                                  className={`pl-12 h-16 rounded-2xl ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} border-none focus-visible:ring-2 focus-visible:ring-gold/30 placeholder:text-gray-400 transition-all shadow-inner`}
-                                  required
-                                />
-                              </div>
-                            </div>
-                            <div className="space-y-3">
-                              <Label htmlFor="customerPhone" className="text-[10px] font-black text-gold uppercase tracking-[0.2em] ml-1">{t('enter_phone')}</Label>
-                              <div className="relative">
-                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gold/30" />
-                                <Input 
-                                  id="customerPhone" 
-                                  value={customerPhone} 
-                                  onChange={(e) => setCustomerPhone(e.target.value)}
-                                  placeholder="+998 -- --- -- --"
-                                  className={`pl-12 h-16 rounded-2xl ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} border-none focus-visible:ring-2 focus-visible:ring-gold/30 placeholder:text-gray-400 transition-all shadow-inner`}
-                                  required
-                                />
-                              </div>
-                            </div>
-                            {error && <p className="text-xs text-red-500 text-center font-black uppercase tracking-widest bg-red-500/10 py-3 rounded-xl border border-red-500/20">{error}</p>}
-                            <Button 
-                              type="submit" 
-                              disabled={loading}
-                              className="w-full bg-gold hover:bg-gold-light text-white h-18 rounded-3xl font-black text-xl uppercase tracking-widest shadow-2xl shadow-gold/20 transition-all active:scale-[0.98]"
+                      <TabsContent value="client" className="space-y-6">
+                        <div className="space-y-6">
+                          <div className="flex bg-gray-50 p-1 rounded-2xl border border-gold/5 mb-6">
+                            <button 
+                              onClick={() => setLoginMethod('phone')}
+                              className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${loginMethod === 'phone' ? 'bg-white text-gold shadow-sm' : 'text-gray-400 font-bold'}`}
                             >
-                              {loading ? (language === 'uz' ? 'YUBORILMOQDA...' : 'ОТПРАВКА...') : (language === 'uz' ? 'KODNI OLISH' : 'ПОЛУЧИТЬ КОД')}
-                            </Button>
-                          </form>
-                        ) : (
-                          <form onSubmit={verifyOtp} className="space-y-6">
-                            <div className="space-y-3">
-                              <Label htmlFor="smsCode" className="text-[10px] font-black text-gold uppercase tracking-[0.2em] ml-1">{language === 'uz' ? 'SMS Kod' : 'SMS Код'}</Label>
+                              Telefon orqali
+                            </button>
+                            <button 
+                              onClick={() => setLoginMethod('email')}
+                              className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${loginMethod === 'email' ? 'bg-white text-gold shadow-sm' : 'text-gray-400 font-bold'}`}
+                            >
+                              Email orqali
+                            </button>
+                          </div>
+
+                          <form onSubmit={handleSimpleLogin} className="space-y-4">
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-gold ml-1">Ismingiz</Label>
                               <Input 
-                                id="smsCode" 
-                                value={smsCode} 
-                                onChange={(e) => setSmsCode(e.target.value)}
-                                placeholder="------"
-                                className={`h-16 rounded-2xl ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} border-none text-center text-2xl font-black tracking-[0.5em] focus-visible:ring-2 focus-visible:ring-gold/30 shadow-inner`}
-                                required
+                                value={customerName}
+                                onChange={(e) => setCustomerName(e.target.value)}
+                                placeholder="Ismingizni kiriting"
+                                className="h-14 rounded-xl bg-gray-50 border-none shadow-inner px-4 font-bold"
                               />
                             </div>
-                            {error && <p className="text-xs text-red-500 text-center font-black uppercase tracking-widest bg-red-500/10 py-3 rounded-xl border border-red-500/20">{error}</p>}
+                            
+                            {loginMethod === 'phone' ? (
+                              <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-gold ml-1">Telefon raqam</Label>
+                                <div className="relative">
+                                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gold/40" />
+                                  <Input 
+                                    value={customerPhone}
+                                    onChange={(e) => setCustomerPhone(e.target.value)}
+                                    placeholder="90 123 45 67"
+                                    className="pl-12 h-14 rounded-xl bg-gray-50 border-none shadow-inner font-bold"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-gold ml-1">Gmail Account</Label>
+                                <div className="relative">
+                                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gold/40" />
+                                  <Input 
+                                    type="email"
+                                    value={customerEmail}
+                                    onChange={(e) => setCustomerEmail(e.target.value)}
+                                    placeholder="example@gmail.com"
+                                    className="pl-12 h-14 rounded-xl bg-gray-50 border-none shadow-inner font-bold"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            
+                            {error && <p className="text-red-500 text-[10px] font-black uppercase tracking-widest text-center">{error}</p>}
+
                             <Button 
                               type="submit" 
                               disabled={loading}
-                              className="w-full bg-gold hover:bg-gold-light text-white h-18 rounded-3xl font-black text-xl uppercase tracking-widest shadow-2xl shadow-gold/20 transition-all active:scale-[0.98]"
+                              className="w-full bg-gold hover:bg-gold-light text-white h-16 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-gold/20 mt-4"
                             >
-                              {loading ? (language === 'uz' ? 'TASDIQLANMOQDA...' : 'ПОДТВЕРЖДЕНИЕ...') : (language === 'uz' ? 'TASDIQLASH' : 'ПОДТВЕРДИТЬ')}
-                            </Button>
-                            <Button variant="link" onClick={() => setShowOtp(false)} className="w-full text-gold font-black uppercase text-[10px] tracking-widest">
-                              {language === 'uz' ? 'Raqamni o\'zgartirish' : 'Изменить номер'}
+                              {loading ? '...' : (language === 'uz' ? 'Kirish' : 'Войти')}
                             </Button>
                           </form>
-                        )}
-                        
-                        <div className="relative my-8">
-                          <div className="absolute inset-0 flex items-center">
-                            <span className={`w-full border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gold/10'}`} />
-                          </div>
-                          <div className="relative flex justify-center text-[10px] uppercase font-black tracking-[0.3em]">
-                            <span className={`${theme === 'dark' ? 'bg-gray-950' : 'bg-white'} px-4 text-gold/40`}>{t('or_premium')}</span>
+                          
+                          <div className="text-center">
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Yoki Google orqali</p>
+                            <Button 
+                              onClick={handleGoogleLogin} 
+                              variant="outline" 
+                              className="w-full h-14 rounded-xl border-gray-100 mt-4 gap-3 font-bold"
+                            >
+                              <Chrome className="w-5 h-5 text-red-500" />
+                              Google bilan kirish
+                            </Button>
                           </div>
                         </div>
-
-                        <Button 
-                          variant="outline"
-                          onClick={(e) => { e.preventDefault(); handleGoogleLogin(); }} 
-                          disabled={loading}
-                          className={`w-full h-18 rounded-3xl border-2 ${theme === 'dark' ? 'border-gray-800 hover:bg-gray-900 text-white' : 'border-gold/10 bg-transparent text-gray-900 hover:bg-gold/5'} flex items-center justify-center gap-4 font-black uppercase tracking-widest transition-all`}
-                        >
-                          <Chrome className="w-6 h-6 text-gold" />
-                          {t('google_login')}
-                        </Button>
                       </TabsContent>
-  
-                      <TabsContent value="worker" className="space-y-6">
-                        <form onSubmit={handleWorkerLogin} className="space-y-6">
-                          <div className="space-y-3">
-                            <Label htmlFor="workerName" className="text-[10px] font-black text-gold uppercase tracking-[0.2em] ml-1">{language === 'uz' ? 'Ism' : 'Имя'}</Label>
+
+                      <TabsContent value="usta" className="space-y-6">
+                        <div className="bg-gray-50 p-6 rounded-2xl border border-gold/10 space-y-3">
+                          <div className="flex items-center gap-3 text-gold">
+                            <Shield className="w-5 h-5" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Usta xizmati haqida</span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 font-medium leading-relaxed italic">
+                            "Bu bo'lim faqat usta va adminlar uchun mo'ljallangan. Usta tizim orqali buyurtmalar, mijozlar va mahsulotlarni boshqarish imkoniyatiga ega bo'ladi."
+                          </p>
+                        </div>
+                        <form onSubmit={handleWorkerLogin} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-gold">Usta ismi</Label>
                             <Input 
-                              id="workerName" 
-                              value={workerName} 
+                              type="text" 
+                              value={workerName}
                               onChange={(e) => setWorkerName(e.target.value)}
-                              placeholder={language === 'uz' ? 'USTA ISMI' : 'ИМЯ МАСТЕРА'}
-                              className={`h-16 rounded-2xl ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} border-none focus-visible:ring-2 focus-visible:ring-gold/30 transition-all shadow-inner`}
+                              placeholder="Usta ismini kiriting"
+                              className="h-14 rounded-xl border-gray-100 focus:ring-gold focus:border-gold px-4 bg-gray-50 font-medium"
                             />
                           </div>
-                          <div className="space-y-3">
-                            <Label htmlFor="workerPass" className="text-[10px] font-black text-gold uppercase tracking-[0.2em] ml-1">{t('secret_pass')}</Label>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-gold">{t('password')}</Label>
                             <Input 
-                              id="workerPass" 
-                              type="password"
-                              value={workerPass} 
+                              type="password" 
+                              value={workerPass}
                               onChange={(e) => setWorkerPass(e.target.value)}
                               placeholder="••••••••"
-                              className={`h-16 rounded-2xl ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} border-none focus-visible:ring-2 focus-visible:ring-gold/30 transition-all shadow-inner`}
+                              className="h-14 rounded-xl border-gray-100 focus:ring-gold focus:border-gold px-4 bg-gray-50 font-medium"
                             />
                           </div>
-                          {error && <p className="text-xs text-red-500 text-center font-black uppercase tracking-widest bg-red-500/10 py-3 rounded-xl border border-red-500/20">{error}</p>}
-                          <Button type="submit" className="w-full bg-gold text-white hover:bg-gold-light h-18 rounded-3xl font-black text-xl uppercase tracking-widest transition-all active:scale-[0.98]">
-                            {t('master_login')}
+                          {error && <p className="text-red-500 text-[10px] font-black uppercase tracking-widest text-center">{error}</p>}
+                          <Button 
+                            type="submit" 
+                            disabled={loading}
+                            className="w-full bg-black hover:bg-gray-900 text-white h-16 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all active:scale-95"
+                          >
+                            {loading ? '...' : t('login')}
                           </Button>
                         </form>
                       </TabsContent>

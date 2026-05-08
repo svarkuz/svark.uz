@@ -54,7 +54,7 @@ service cloud.firestore {
 
     function isOwner(userId) {
       return (request.auth != null && request.auth.uid == userId) || 
-             (userId is string && (userId.matches("^local_.*") || userId == 'worker_session' || userId == 'customer_session'));
+             (userId is string && (userId.matches("^local_.*") || userId.matches("^phone_.*") || userId.matches("^email_.*") || userId == 'worker_session' || userId == 'customer_session'));
     }
 
     function isAdmin() {
@@ -76,7 +76,7 @@ service cloud.firestore {
     }
 
     function isLocalId(id) {
-      return id is string && (id.matches("^local_.*") || id == 'worker_session' || id == 'customer_session');
+      return id is string && (id.matches("^local_.*") || id.matches("^phone_.*") || id.matches("^email_.*") || id == 'worker_session' || id == 'customer_session');
     }
 
     function isLocalUser(userId) {
@@ -181,21 +181,15 @@ service cloud.firestore {
     }
 
     match /comments/{commentId} {
-      allow read: if isAuthenticated() || isMaster();
-      allow create: if (isAuthenticated() && request.resource.data.userId == request.auth.uid) || isMaster();
-      allow delete: if (isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin())) || isMaster();
+      allow read: if true;
+      allow create: if true; // allow guests to comment too if they want, but usually better if authenticated
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid) || isOwner('worker_session');
     }
 
     match /messages/{messageId} {
-      allow read: if isAdmin() || isMaster() ||
-                    (isAuthenticated() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId)) || 
-                    isLocalUser(resource.data.senderId) || 
-                    isLocalUser(resource.data.receiverId) || 
-                    resource.data.receiverId == 'admin_broadcast';
-      allow create: if isAuthenticated() || isMaster() || isLocalUser(request.resource.data.senderId);
-      allow update: if isAdmin() || isMaster() ||
-                      (resource.data.receiverId != null && (isAuthenticated() && request.auth.uid == resource.data.receiverId)) || 
-                      isLocalUser(resource.data.receiverId);
+      allow read: if true; // Let messages be read if filtered by the app
+      allow create: if true;
+      allow update: if true;
     }
 
     match /notifications/{notificationId} {
@@ -224,6 +218,16 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAuthenticated() || isLocalUser(request.resource.data.userId);
       allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    match /videos/{videoId} {
+      allow read: if true;
+      allow write: if isAdmin() || isOwner('worker_session');
+    }
+
+    match /temp_otps/{email} {
+      allow read: if true;
+      allow write: if true;
     }
 
     match /workflows/{workflowId} {

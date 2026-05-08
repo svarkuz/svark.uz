@@ -14,10 +14,10 @@ interface ProfileSetupProps {
 }
 
 export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onComplete }) => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [firstName, setFirstName] = useState(user?.displayName?.split(' ')[0] || '');
+  const [lastName, setLastName] = useState(user?.displayName?.split(' ').slice(1).join(' ') || '');
   const [phone, setPhone] = useState('');
-  const [photoURL, setPhotoURL] = useState('');
+  const [photoURL, setPhotoURL] = useState(user?.photoURL || '');
   const [loading, setLoading] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

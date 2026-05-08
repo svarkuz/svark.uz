@@ -56,6 +56,18 @@ button, .button {
     --color-siyoh-accent: #FDFBF7;
 }
 
+@utility custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    @apply bg-gold/20 rounded-full hover:bg-gold/40 transition-colors;
+  }
+}
+
 :root {
     --background: oklch(0.99 0.01 80);
     --foreground: oklch(0.25 0.05 80);

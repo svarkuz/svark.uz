@@ -163,21 +163,23 @@ export const GalleryDetail: React.FC<GalleryDetailProps> = ({ item, user, onClos
                     <Sparkles className="w-4 h-4" />
                     AI Tavsifi
                   </div>
-                  <div className="p-6 bg-gray-50 rounded-[2rem] text-gray-600 text-sm leading-relaxed border border-gold/5 italic font-medium shadow-inner relative group/ai">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-gold/20 rounded-full" />
-                    {loadingAi ? (
-                      <div className="flex items-center gap-3 animate-pulse">
-                        <div className="flex gap-1.5">
-                          <div className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce" />
-                          <div className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce [animation-delay:0.2s]" />
-                          <div className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce [animation-delay:0.4s]" />
+                    <div className="p-6 bg-gray-50 rounded-[2rem] text-gray-700 text-sm leading-relaxed border border-gold/10 italic font-bold shadow-inner relative group/ai overflow-y-auto max-h-[200px] custom-scrollbar">
+                      <div className="absolute top-0 left-0 w-1.5 h-full bg-gold/30 rounded-full" />
+                      {loadingAi ? (
+                        <div className="flex items-center gap-3 animate-pulse">
+                          <div className="flex gap-1.5">
+                            <div className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce" />
+                            <div className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce [animation-delay:0.2s]" />
+                            <div className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce [animation-delay:0.4s]" />
+                          </div>
+                          <span className="font-black uppercase text-[10px] tracking-widest text-gold/40">AI o'ylamoqda...</span>
                         </div>
-                        <span className="font-black uppercase text-[10px] tracking-widest text-gold/40">AI o'ylamoqda...</span>
-                      </div>
-                    ) : (
-                      aiDescription
-                    )}
-                  </div>
+                      ) : (
+                        <div className="text-gold-dark dark:text-gold">
+                          {aiDescription}
+                        </div>
+                      )}
+                    </div>
                 </div>
 
                 {/* Comments Section */}
@@ -200,7 +202,7 @@ export const GalleryDetail: React.FC<GalleryDetailProps> = ({ item, user, onClos
                               {comment.createdAt?.toDate().toLocaleDateString()}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-[1.5rem] rounded-tl-none border border-gold/5 font-medium leading-relaxed">
+                          <p className="text-sm text-gold font-black bg-gold/5 p-4 rounded-[1.5rem] rounded-tl-none border border-gold/10 leading-relaxed shadow-sm">
                             {comment.text}
                           </p>
                         </div>
@@ -219,7 +221,7 @@ export const GalleryDetail: React.FC<GalleryDetailProps> = ({ item, user, onClos
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   disabled={!user || submittingComment}
-                  className="h-14 rounded-2xl bg-gray-50 border-none px-6 focus-visible:ring-1 focus-visible:ring-gold/20 shadow-inner placeholder:text-gray-400 font-medium"
+                  className="h-14 rounded-2xl bg-gray-50 border-none px-6 focus-visible:ring-1 focus-visible:ring-gold/20 shadow-inner placeholder:text-gray-400 font-bold text-gold"
                 />
                 <Button 
                   type="submit" 
